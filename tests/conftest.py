@@ -4,7 +4,7 @@ import pytest
 import docker
 from fastapi.testclient import TestClient
 
-from services_debugger.main import app
+from app.main import app
 
 
 @pytest.fixture(scope='session')
@@ -19,7 +19,6 @@ def db_connection() -> sqlite3.Connection:
 
     yield connection
 
-    connection.commit()
     connection.close()
 
 
@@ -31,6 +30,7 @@ def drop_all_data_in_db(db_connection: sqlite3.Connection):
     cursor = db_connection.cursor()
     cursor.execute('DELETE FROM hosts')
 
+    db_connection.commit()
 
 @pytest.fixture(scope='session')
 def test_ssh_server():

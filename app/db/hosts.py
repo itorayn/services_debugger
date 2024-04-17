@@ -3,8 +3,8 @@ from typing import List
 
 from sqlalchemy import create_engine, MetaData, Table, String, Integer, Column
 
-from .singleton import Singleton
-from .host_model import Host
+from app.singleton import Singleton
+from app.models.host import Host
 
 
 metadata = MetaData()
