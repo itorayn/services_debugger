@@ -88,7 +88,7 @@ class SSHConnectionManager(metaclass=SingletonMeta):
                 conn = self._create_ssh_connection(address, port, username, password)
                 self._connections[(address, int(port))] = conn
             self._logger.info(f'Create new lease connection: {lease_id}, '
-                            f'connection: {(address, int(port))}')
+                              f'connection: {(address, int(port))}')
             self._leases[lease_id] = (address, int(port))
 
         return lease_id, conn

@@ -2,13 +2,15 @@ import os
 import time
 
 import pytest
-from scapy.all import rdpcap, ICMP
+from scapy.all import rdpcap, ICMP  # pylint: disable=no-name-in-module
 
-from services_debugger.dumpers import PCAPDump
+from app.dumpers import PCAPDump
 
 
 @pytest.mark.usefixtures('test_ssh_server')
 def test_pcap_dumper():
+    """Проверка работы удаленного траффика."""
+
     dumper = PCAPDump(name='pcap_dump', address='127.0.0.1', port=10022,
                       username='test_user', password='test_password', output_file='test_dump.pcap')
     dumper.start()

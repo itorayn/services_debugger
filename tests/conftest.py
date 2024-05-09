@@ -2,19 +2,35 @@ import sqlite3
 
 import pytest
 import docker
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # pylint: disable=wrong-import-order
 
 from app.main import app
 
 
 @pytest.fixture(scope='session')
 def test_client() -> TestClient:
+    """
+    Фикстура для создания тестового клиента API.
+
+    Returns:
+        TestClient: Тестовый клиент API
+    """
+
     client = TestClient(app)
     return client
 
 
 @pytest.fixture()
 def db_connection() -> sqlite3.Connection:
+    """
+    Фикстура для создания подключения к базе данных.
+    В SETUP происходит подключение к базе, в тест передается объект для взаимодействия с базой,
+    а в TEARDOWN происходит закрытие подключения.
+
+    Yields:
+        Iterator[sqlite3.Connection]: Объект для взаимодействия с базой
+    """
+
     connection = sqlite3.connect('test.db')
 
     yield connection
@@ -24,6 +40,13 @@ def db_connection() -> sqlite3.Connection:
 
 @pytest.fixture()
 def drop_all_data_in_db(db_connection: sqlite3.Connection):
+    """
+    Фикстура для удаления всех данных из базы по окончанию теста.
+    Все  действия по удалению происходят в TEARDOWN теста.
+
+    Args:
+        db_connection (sqlite3.Connection): Объект для взаимодействия с базой
+    """
 
     yield
 
@@ -32,8 +55,16 @@ def drop_all_data_in_db(db_connection: sqlite3.Connection):
 
     db_connection.commit()
 
+
 @pytest.fixture(scope='session')
 def test_ssh_server():
+    """
+    Фикстура для запуска Docker контейнера выполняющего роль тестового сервера,
+    к которому происходит подключение по SSH протоколу в тестах.
+    В запускаемом контейнере будет запущен "ping" c выводом отчета в файл следующей командой:
+    "ping localhost > /tmp/ping.log"
+    """
+
     client = docker.from_env()
     try:
         _ = client.images.get('test_ssh_server')

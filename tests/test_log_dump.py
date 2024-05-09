@@ -4,11 +4,13 @@ import re
 
 import pytest
 
-from services_debugger.dumpers import LogDump
+from app.dumpers import LogDump
 
 
 @pytest.mark.usefixtures('test_ssh_server')
 def test_log_dumper():
+    """Проверка работы удаленного сниффера логов."""
+
     dumper = LogDump(name='log_dump', address='127.0.0.1', port=10022,
                      username='test_user', password='test_password',
                      output_file='ping.log', dumped_file='/tmp/ping.log')

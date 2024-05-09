@@ -6,6 +6,10 @@ from threading import Thread
 from .ssh_conn_mngr import SSHConnectionManager
 
 
+class DumperError(Exception):
+    """Исключение возникающее при ошибке в работе сниффера."""
+
+
 class BaseDumper(Thread):
     """Базовый класс сниффера."""
 
@@ -46,7 +50,7 @@ class BaseDumper(Thread):
 
             if channel.exit_status_ready():
                 exitcode = channel.recv_exit_status()
-                raise Exception(f'The process terminated early with exit code: {exitcode}')
+                raise DumperError(f'The process terminated early with exit code: {exitcode}')
 
             file_descriptor = channel.fileno()
             epoll = select.epoll()

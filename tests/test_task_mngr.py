@@ -3,13 +3,20 @@ import time
 import re
 
 import pytest
-from scapy.all import rdpcap, ICMP
+from scapy.all import rdpcap, ICMP  # pylint: disable=no-name-in-module
 
-from services_debugger.task_mngr import TaskManager
+from app.task_mngr import TaskManager
 
 
 @pytest.fixture(scope='session')
 def task_manager() -> TaskManager:
+    """
+    Фикстура для создания тестового менеджера задач.
+
+    Yields:
+        Iterator[TaskManager]: Менеджер задач
+    """
+
     manager = TaskManager('task_mngr')
     manager.start()
 
@@ -20,6 +27,13 @@ def task_manager() -> TaskManager:
 
 @pytest.mark.usefixtures('test_ssh_server')
 def test_start_pcap_dump(task_manager: TaskManager):
+    """
+    Проверка запуска удаленного сниффера траффика.
+
+    Args:
+        task_manager (TaskManager): Менеджер задач
+    """
+
     message, task_id = task_manager.start_pcap_dump(address='127.0.0.1', port=10022,
                                                     username='test_user', password='test_password',
                                                     output_file='test_dump.pcap')
@@ -41,6 +55,13 @@ def test_start_pcap_dump(task_manager: TaskManager):
 
 @pytest.mark.usefixtures('test_ssh_server')
 def test_get_task_info(task_manager: TaskManager):
+    """
+    Проверка получения информации о запущенной задаче.
+
+    Args:
+        task_manager (TaskManager): Менеджер задач
+    """
+
     _, task_id = task_manager.start_pcap_dump(address='127.0.0.1', port=10022,
                                               username='test_user', password='test_password',
                                               output_file='test_dump.pcap')
@@ -62,6 +83,13 @@ def test_get_task_info(task_manager: TaskManager):
 
 
 def test_get_task_info_non_existing_task(task_manager: TaskManager):
+    """
+    Проверка получения информации о несуществующей задаче.
+
+    Args:
+        task_manager (TaskManager): Менеджер задач
+    """
+
     with pytest.raises(Exception) as e_info:
         task_manager.get_task_info('yhsf76ha')
     assert str(e_info.value) == 'Task with id="yhsf76ha" not found in task list.'
@@ -69,6 +97,13 @@ def test_get_task_info_non_existing_task(task_manager: TaskManager):
 
 @pytest.mark.usefixtures('test_ssh_server')
 def test_start_log_dump(task_manager: TaskManager):
+    """
+    Проверка запуска удаленного сниффера логов.
+
+    Args:
+        task_manager (TaskManager): Менеджер задач
+    """
+
     message, task_id = task_manager.start_log_dump(address='127.0.0.1', port=10022,
                                                    username='test_user', password='test_password',
                                                    output_file='ping.log', dumped_file='/tmp/ping.log')
@@ -92,6 +127,13 @@ def test_start_log_dump(task_manager: TaskManager):
 
 
 def test_stop_non_existing_task(task_manager: TaskManager):
+    """
+    Проверка завершения выполнения несуществующий задачи.
+
+    Args:
+        task_manager (TaskManager): Менеджер задач
+    """
+
     with pytest.raises(Exception) as e_info:
         task_manager.stop_task('yhsf76ha')
     assert str(e_info.value) == 'Task with id="yhsf76ha" not found in task list.'
@@ -99,6 +141,13 @@ def test_stop_non_existing_task(task_manager: TaskManager):
 
 @pytest.mark.usefixtures('test_ssh_server')
 def test_start_two_task(task_manager: TaskManager):
+    """
+    Проверка работы двух задач одновременно.
+
+    Args:
+        task_manager (TaskManager): Менеджер задач
+    """
+
     message, log_dump_task_id = task_manager.start_log_dump(address='127.0.0.1', port=10022,
                                                             username='test_user', password='test_password',
                                                             output_file='ping.log', dumped_file='/tmp/ping.log')
@@ -141,15 +190,23 @@ def test_start_two_task(task_manager: TaskManager):
 
 @pytest.mark.usefixtures('test_ssh_server')
 def test_get_all_tasks(task_manager: TaskManager):
+    """
+    Проверка получения информации о всех запущенных задачах.
+
+    Args:
+        task_manager (TaskManager): Менеджер задач
+    """
+
     _, log_dump_task_id = task_manager.start_log_dump(address='127.0.0.1', port=10022,
-                                                            username='test_user', password='test_password',
-                                                            output_file='ping.log', dumped_file='/tmp/ping.log')
+                                                      username='test_user', password='test_password',
+                                                      output_file='ping.log', dumped_file='/tmp/ping.log')
     tasks = task_manager.get_all_tasks()
     assert isinstance(tasks, list)
     assert len(tasks) == 1
     log_dump_task_info = tasks[0]
     assert isinstance(log_dump_task_info, dict)
-    assert isinstance(log_dump_task_info['name'], str) and log_dump_task_info['name'].endswith(f'log_{log_dump_task_id}')
+    assert isinstance(log_dump_task_info['name'], str)
+    assert log_dump_task_info['name'].endswith(f'log_{log_dump_task_id}')
     assert log_dump_task_info['task_id'] == log_dump_task_id
     assert log_dump_task_info['is_alive'] is True
 
@@ -163,12 +220,14 @@ def test_get_all_tasks(task_manager: TaskManager):
     assert len(tasks) == 2
     log_dump_task_info = tasks[0]
     assert isinstance(log_dump_task_info, dict)
-    assert isinstance(log_dump_task_info['name'], str) and log_dump_task_info['name'].endswith(f'log_{log_dump_task_id}')
+    assert isinstance(log_dump_task_info['name'], str)
+    assert log_dump_task_info['name'].endswith(f'log_{log_dump_task_id}')
     assert log_dump_task_info['task_id'] == log_dump_task_id
     assert log_dump_task_info['is_alive'] is True
     pcap_dump_task_info = tasks[1]
     assert isinstance(pcap_dump_task_info, dict)
-    assert isinstance(pcap_dump_task_info['name'], str) and pcap_dump_task_info['name'].endswith(f'pcap_{pcap_dump_task_id}')
+    assert isinstance(pcap_dump_task_info['name'], str)
+    assert pcap_dump_task_info['name'].endswith(f'pcap_{pcap_dump_task_id}')
     assert pcap_dump_task_info['task_id'] == pcap_dump_task_id
     assert pcap_dump_task_info['is_alive'] is True
 
@@ -180,7 +239,8 @@ def test_get_all_tasks(task_manager: TaskManager):
     assert len(tasks) == 1
     pcap_dump_task_info = tasks[0]
     assert isinstance(pcap_dump_task_info, dict)
-    assert isinstance(pcap_dump_task_info['name'], str) and pcap_dump_task_info['name'].endswith(f'pcap_{pcap_dump_task_id}')
+    assert isinstance(pcap_dump_task_info['name'], str)
+    assert pcap_dump_task_info['name'].endswith(f'pcap_{pcap_dump_task_id}')
     assert pcap_dump_task_info['task_id'] == pcap_dump_task_id
     assert pcap_dump_task_info['is_alive'] is True
 
