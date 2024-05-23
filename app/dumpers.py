@@ -100,6 +100,8 @@ class LogDump(BaseDumper):
     SSH канала и запись их в файл.
     """
 
+    task_type = 'log_dump'
+
     def __init__(self, name: str, address: str, port: Union[str, int],
                  username: str, password: str, output_file: str, dumped_file: str):
         super().__init__(name, address, port, username, password, output_file)
@@ -124,6 +126,8 @@ class PCAPDump(BaseDumper):
     запуск команды tcpdump с выводом захваченного трафика в SSH канал, прием захваченного трафика из
     SSH канала и запись его в файл.
     """
+
+    task_type = 'pcap_dump'
 
     def __init__(self, name: str, address: str, port: Union[str, int],
                  username: str, password: str, output_file: str, dumped_interface: str = 'any'):

@@ -5,12 +5,13 @@ import multiprocessing
 import threading
 from dataclasses import dataclass, field
 from logging.handlers import QueueHandler
-from typing import Union, Tuple, List, Dict
+from typing import Union, Tuple, List
 from queue import Empty
 from random import choices
 
 from .dumpers import PCAPDump, LogDump
 from .ssh_conn_mngr import SSHConnectionManager
+from .models.task import Task
 
 
 @dataclass
@@ -109,23 +110,26 @@ class TaskManager:
                         dumper = LogDump(f'{logger_name}.log_{task_id}', *cmd.args, **cmd.kwargs)
                     dumper.start()
                     tasks[task_id] = dumper
-                    returned_value = ('Successfully started', task_id)
+                    returned_value = Task(task_id=task_id, name=dumper.name,
+                                          task_type=dumper.task_type, is_alive=dumper.is_alive())
                 elif cmd.name == 'get_task_info':
                     task_id = cmd.args[0]
                     task = tasks.get(task_id, None)
                     if task is None:
-                        returned_value = Exception(f'Task with id="{task_id}" not found in task list.')
+                        returned_value = LookupError(f'Task with id="{task_id}" not found in task list.')
                     else:
-                        returned_value = {'name': task.name, 'task_id': task_id, 'is_alive': task.is_alive()}
+                        returned_value = Task(task_id=task_id, name=task.name,
+                                              task_type=task.task_type, is_alive=task.is_alive())
                 elif cmd.name == 'get_all_tasks':
                     returned_value = []
                     for task_id, task in tasks.items():
-                        returned_value.append({'name': task.name, 'task_id': task_id, 'is_alive': task.is_alive()})
+                        returned_value.append(Task(task_id=task_id, name=task.name,
+                                                   task_type=task.task_type, is_alive=task.is_alive()))
                 elif cmd.name == 'stop_task':
                     task_id = cmd.args[0]
                     task = tasks.pop(task_id, None)
                     if task is None:
-                        returned_value = Exception(f'Task with id="{task_id}" not found in task list.')
+                        returned_value = LookupError(f'Task with id="{task_id}" not found in task list.')
                     else:
                         task.stop()
                         returned_value = ('Successfully stopped', task_id)
@@ -154,7 +158,7 @@ class TaskManager:
         return result
 
     def start_pcap_dump(self, address: str, port: Union[str, int],
-                        username: str, password: str, output_file: str) -> Tuple[str, str]:
+                        username: str, password: str, output_file: str) -> Task:
         """
         Запуск удаленного сниффера траффика.
 
@@ -166,7 +170,7 @@ class TaskManager:
             output_file (str): Путь к локальному файлу в который необходимо записать захваченный траффик
 
         Returns:
-            Tuple[str, str]: Кортеж состоящий из сообщения и идентификатора задачи
+            Task: Объект задачи
         """
 
         command = TaskManagerCommand(name='start_pcap_dump',
@@ -175,7 +179,7 @@ class TaskManager:
         return result.data
 
     def start_log_dump(self, address: str, port: Union[str, int],
-                       username: str, password: str, output_file: str, dumped_file: str) -> Tuple[str, str]:
+                       username: str, password: str, output_file: str, dumped_file: str) -> Task:
         """
         Запуск удаленного сниффера логов.
 
@@ -188,7 +192,7 @@ class TaskManager:
             dumped_file (str): Путь у удаленному файлу логов
 
         Returns:
-            Tuple[str, str]: Кортеж состоящий из сообщения и идентификатора задачи
+            Task: Объект задачи
         """
 
         command = TaskManagerCommand(name='start_log_dump',
@@ -196,7 +200,7 @@ class TaskManager:
         result = self._send_rpc_command(command)
         return result.data
 
-    def get_task_info(self, task_id: str) -> Dict[str, Union[bool, str]]:
+    def get_task_info(self, task_id: str) -> Task:
         """
         Получить информацию о состоянии задачи.
 
@@ -204,19 +208,19 @@ class TaskManager:
             task_id (str): Идентификатор задачи
 
         Returns:
-            Dict[str, Union[bool, str]]: Словарь с информацией о состоянии задачи
+            Task: Объект задачи
         """
 
         command = TaskManagerCommand(name='get_task_info', args=(task_id,))
         result = self._send_rpc_command(command)
         return result.data
 
-    def get_all_tasks(self) -> List[Dict[str, Union[bool, str]]]:
+    def get_all_tasks(self) -> List[Task]:
         """
         Получить информацию о всех запущенных задачах.
 
         Returns:
-            List[Dict[str, Union[bool, str]]]: Список текущих задач
+            List[Task]: Список текущих задач
         """
 
         command = TaskManagerCommand(name='get_all_tasks')

@@ -17,8 +17,7 @@ hosts = Table('hosts', metadata,
               Column('ssh_address', String(256), nullable=False),
               Column('ssh_port', Integer(), default=22, nullable=False),
               Column('username', String(256), nullable=False),
-              Column('password', String(256), nullable=False)
-)
+              Column('password', String(256), nullable=False))
 
 metadata.create_all(engine)
 
