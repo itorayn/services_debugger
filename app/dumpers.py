@@ -2,6 +2,7 @@ import logging
 import select
 from typing import Union
 from threading import Thread
+from abc import ABC, abstractmethod
 
 from .ssh_conn_mngr import SSHConnectionManager
 
@@ -10,8 +11,13 @@ class DumperError(Exception):
     """Исключение возникающее при ошибке в работе сниффера."""
 
 
-class BaseDumper(Thread):
+class BaseDumper(Thread, ABC):
     """Базовый класс сниффера."""
+
+    @property
+    @abstractmethod
+    def task_type(self) -> str:
+        """Тип сниффера в текстовом виде."""
 
     @property
     def executed_command(self) -> str:
