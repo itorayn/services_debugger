@@ -21,4 +21,5 @@ jobs:
         pip install flake8-pylint
     - name: Analysing the code with flake8
       run: |
-        flake8 $(git ls-files '*.py')
+        flake8 tests/
+        flake8 app/
