@@ -56,6 +56,11 @@ def check_has_not_connections():
 def test_constructor():
     """Проверка того что создается только один менеджер SSH подключений."""
 
+    # pylint: disable-next=protected-access
+    if SSHConnectionManager._instance is not None:
+        # pylint: disable-next=protected-access
+        SSHConnectionManager._instance = None
+
     manager1 = SSHConnectionManager('test_ssh_conn_manager_1')
     manager2 = SSHConnectionManager('test_ssh_conn_manager_2')
     assert manager1 is manager2

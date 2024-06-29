@@ -5,7 +5,6 @@ disable=missing-module-docstring, logging-fstring-interpolation
 max-line-length=120
 
 [DESIGN]
-; min-public-methods=0
-; max-public-methods=30
+min-public-methods=0
 max-args=10
 max-attributes=15

@@ -1,6 +1,6 @@
 import logging
 import select
-from typing import Union
+from typing import Union, Literal
 from threading import Thread
 from abc import ABC, abstractmethod
 
@@ -11,15 +11,16 @@ class DumperError(Exception):
     """Исключение возникающее при ошибке в работе сниффера."""
 
 
-class BaseDumper(Thread, ABC):
+class Dumper(Thread, ABC):
     """Базовый класс сниффера."""
 
     @property
     @abstractmethod
-    def task_type(self) -> str:
+    def task_type(self) -> Literal['log_dump', 'pcap_dump']:
         """Тип сниффера в текстовом виде."""
 
     @property
+    @abstractmethod
     def executed_command(self) -> str:
         """Выполняемая команда на удаленном хосте."""
 
@@ -33,7 +34,6 @@ class BaseDumper(Thread, ABC):
             "username": username,
             "password": password
         }
-        self._ssh_manager = SSHConnectionManager(None)
         self._need_stop = False
         self._output_file = output_file
 
@@ -47,8 +47,8 @@ class BaseDumper(Thread, ABC):
 
     def run(self):
         self._logger.info('Starting ...')
-
-        with self._ssh_manager.connection(**self._connection_parameters) as ssh, \
+        ssh_manager = SSHConnectionManager(f'{self.name}.ssh_mngr')
+        with ssh_manager.connection(**self._connection_parameters) as ssh, \
              open(self._output_file, 'wb') as output_file:
             self._logger.info(f'Execute command: {self.executed_command}')
             _, stdout, stderr = ssh.exec_command(self.executed_command)
@@ -99,7 +99,7 @@ class BaseDumper(Thread, ABC):
             self.join()
 
 
-class LogDump(BaseDumper):
+class LogDump(Dumper):
     """
     Класс удаленного сниффера логов. Выполняет подключение к удаленному хосту по SSH,
     запуск команды tail -f <dumped_file> с выводом захваченных логов в SSH канал, прием захваченных логов из
@@ -126,7 +126,7 @@ class LogDump(BaseDumper):
         return f'tail --follow=name --retry --lines=1 {self._dumped_file}'
 
 
-class PCAPDump(BaseDumper):
+class PCAPDump(Dumper):
     """
     Класс удаленного сниффера траффика. Выполняет подключение к удаленному хосту по SSH,
     запуск команды tcpdump с выводом захваченного трафика в SSH канал, прием захваченного трафика из

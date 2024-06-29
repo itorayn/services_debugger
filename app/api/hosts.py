@@ -24,8 +24,8 @@ def get_all_hosts():
 def get_host(host_id: int):
     try:
         host = host_repo.get_host(host_id)
-    except LookupError:
-        raise HTTPException(status_code=404, detail='Host not found')
+    except LookupError as err:
+        raise HTTPException(status_code=404, detail='Host not found') from err
 
     return host
 
@@ -34,8 +34,8 @@ def get_host(host_id: int):
 def delete_host(host_id: int):
     try:
         host_repo.delete_host(host_id)
-    except LookupError:
-        raise HTTPException(status_code=404, detail='Host not found')
+    except LookupError as err:
+        raise HTTPException(status_code=404, detail='Host not found') from err
     return {'detail': 'Deleted'}
 
 
@@ -43,6 +43,6 @@ def delete_host(host_id: int):
 def update_host(host: Host, host_id: int):
     try:
         host_repo.update_host(host, host_id)
-    except LookupError:
-        raise HTTPException(status_code=404, detail='Host not found')
+    except LookupError as err:
+        raise HTTPException(status_code=404, detail='Host not found') from err
     return {'detail': 'Updated'}

@@ -163,6 +163,29 @@ def test_start_log_dump(task_manager: TaskManager):
     check_captured_log_file()
 
 
+@pytest.mark.usefixtures('test_ssh_server')
+def test_stop_task(task_manager: TaskManager):
+    """
+    Проверка завершения выполнения задачи.
+
+    Args:
+        task_manager (TaskManager): Менеджер задач
+    """
+
+    task_info = task_manager.start_log_dump(address='127.0.0.1', port=10022,
+                                            username='test_user', password='test_password',
+                                            output_file='ping.log', dumped_file='/tmp/ping.log')
+
+    time.sleep(5)
+
+    task_info = task_manager.stop_task(task_info.task_id)
+    assert isinstance(task_info, Task)
+    assert task_info.name.endswith(f'log_{task_info.task_id}')
+    assert task_info.task_type == 'log_dump'
+    assert task_info.is_alive is False
+    check_captured_log_file()
+
+
 def test_stop_non_existing_task(task_manager: TaskManager):
     """
     Проверка завершения выполнения несуществующий задачи.

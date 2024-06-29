@@ -1,7 +1,7 @@
 import logging
 import string
 from threading import Lock
-from typing import Union, Tuple
+from typing import Union, Tuple, Generator
 from random import choices
 from contextlib import contextmanager
 
@@ -38,8 +38,8 @@ class SSHConnectionManager(metaclass=SingletonMeta):
         self._logger = logging.getLogger(self.name)
         self._logger.info('Start init new SSHConnectionManager')
         self._lock = Lock()
-        self._connections = {}
-        self._leases = {}
+        self._connections: dict[Tuple[str, int], paramiko.SSHClient] = {}
+        self._leases: dict[str, Tuple[str, int]] = {}
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(name={repr(self.name)})'
@@ -98,7 +98,7 @@ class SSHConnectionManager(metaclass=SingletonMeta):
         self._logger.info(f'Create new SSH connection: {username}:{password}@{address}:{port}')
         ssh_client = paramiko.SSHClient()
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh_client.connect(hostname=address, username=username, password=password, port=port)
+        ssh_client.connect(hostname=address, username=username, password=password, port=int(port))
         return ssh_client
 
     def release_connection(self, lease_id: str):
@@ -154,7 +154,7 @@ class SSHConnectionManager(metaclass=SingletonMeta):
 
     @contextmanager
     def connection(self, address: str, port: Union[str, int],
-                   username: str, password: str) -> paramiko.SSHClient:
+                   username: str, password: str) -> Generator[paramiko.SSHClient, None, None]:
         """
         Контекстный менеджер подключения. При входе в контекст создает SSH подключение,
         а при выходе из контекста освобождает аренду подключения.
