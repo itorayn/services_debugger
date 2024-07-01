@@ -1,0 +1,7 @@
+paramiko
+fastapi
+flake8
+flake8-pylint
+pytest
+docker
+scapy

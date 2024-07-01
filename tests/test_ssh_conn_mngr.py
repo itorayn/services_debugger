@@ -3,7 +3,6 @@ from subprocess import Popen, PIPE
 
 import pytest
 import paramiko
-# from gi.repository import Gio
 
 from app.ssh_conn_mngr import SSHConnectionManager
 
