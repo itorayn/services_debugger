@@ -1,5 +1,6 @@
 paramiko
 fastapi
+sqlalchemy
 flake8
 flake8-pylint
 pytest

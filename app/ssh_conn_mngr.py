@@ -1,7 +1,7 @@
 import logging
 import string
 from threading import Lock
-from typing import Union, Tuple, Generator
+from typing import Union, Tuple, Generator, Dict
 from random import choices
 from contextlib import contextmanager
 
@@ -38,8 +38,8 @@ class SSHConnectionManager(metaclass=SingletonMeta):
         self._logger = logging.getLogger(self.name)
         self._logger.info('Start init new SSHConnectionManager')
         self._lock = Lock()
-        self._connections: dict[Tuple[str, int], paramiko.SSHClient] = {}
-        self._leases: dict[str, Tuple[str, int]] = {}
+        self._connections: Dict[Tuple[str, int], paramiko.SSHClient] = {}
+        self._leases: Dict[str, Tuple[str, int]] = {}
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(name={repr(self.name)})'
