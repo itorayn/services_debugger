@@ -21,7 +21,7 @@ class TaskManagerCommand:
     """
 
     name: str
-    args: tuple = field(default_factory=list)
+    args: tuple = field(default_factory=list)  # type: ignore
     kwargs: dict = field(default_factory=dict)
 
 
@@ -37,7 +37,7 @@ class TaskManagerResult:
 context = multiprocessing.get_context('spawn')
 
 
-class ProcessTaskManager(context.Process):
+class ProcessTaskManager(context.Process):  # type: ignore
     """
     Бековая часть менеджер задач. Работает в субпроцессе и выполняет следующие функции:
         - инициализацию менеджера SSH подключений;
@@ -46,7 +46,8 @@ class ProcessTaskManager(context.Process):
         - контроль созданных задач.
     """
 
-    def __init__(self, name: str, log_queue: context.Queue, cmd_queue: context.Queue, res_queue: context.Queue):
+    def __init__(self, name: str, log_queue: context.Queue,  # type: ignore
+                 cmd_queue: context.Queue, res_queue: context.Queue):  # type: ignore
         super().__init__(daemon=True)
         self.name = name
         self.need_stop = context.Event()
@@ -138,7 +139,7 @@ class ProcessTaskManager(context.Process):
 class LogProxyThread(threading.Thread):
     """Прокси для лог записей, получает записи из очереди и передает их логгеру."""
 
-    def __init__(self, name: str, log_queue: context.Queue, logger: logging.Logger):
+    def __init__(self, name: str, log_queue: context.Queue, logger: logging.Logger):  # type: ignore
         super().__init__(name=name, daemon=True)
         self.need_stop = threading.Event()
         self._log_queue = log_queue
@@ -192,6 +193,9 @@ class TaskManager:
             self._log_thread.start()
 
     def _send_rpc_command(self, rpc_command: TaskManagerCommand) -> TaskManagerResult:
+        if self._process is None:
+            raise RuntimeError('TaskManager not started!')
+
         self._cmd_queue.put(rpc_command)
 
         try:
