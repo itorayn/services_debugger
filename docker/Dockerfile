@@ -6,4 +6,4 @@ RUN adduser -D -H -s /bin/ash -h / -G root test_user && \
     setcap cap_net_raw,cap_net_admin=eip $(which tcpdump)
 EXPOSE 10022/tcp
 
-ENTRYPOINT /bin/ash -c "/usr/sbin/dropbear -B -R -j -k -m -p 0.0.0.0:10022; ping localhost > /tmp/ping.log"
+ENTRYPOINT /bin/ash -c "/usr/sbin/dropbear -B -R -j -k -m -p 0.0.0.0:10022; ping -4 localhost > /tmp/ping.log"
