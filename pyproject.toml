@@ -1,0 +1,34 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "Service debugger"
+version = "0.0.1"
+authors = ["Vladimir Muzyka <vladimir.muzyka@gmail.com>"]
+description = "Service for debug other microservices"
+package-mode = false
+
+
+[tool.poetry.dependencies]
+python = "^3.8.0"
+paramiko = "*"
+fastapi = "*"
+sqlalchemy = "*"
+
+[tool.poetry.group.test]
+optional = true
+
+[tool.poetry.group.test.dependencies]
+pytest = "*"
+docker = "*"
+scapy = "*"
+httpx = "*"
+
+[tool.poetry.group.linting]
+optional = true
+
+[tool.poetry.group.linting.dependencies]
+flake8 = "*"
+flake8-pylint = "*"
+pyproject-flake8 = "*"

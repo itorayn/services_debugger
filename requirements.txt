@@ -1,9 +1,0 @@
-paramiko
-fastapi
-httpx
-sqlalchemy
-flake8
-flake8-pylint
-pytest
-docker
-scapy
