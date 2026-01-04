@@ -1,14 +1,15 @@
 import os
-from subprocess import Popen, PIPE
+from collections.abc import Generator
+from subprocess import PIPE, Popen
 
-import pytest
 import paramiko
+import pytest
 
 from app.ssh_conn_mngr import SSHConnectionManager
 
 
-@pytest.fixture()
-def ssh_connection_manager() -> SSHConnectionManager:
+@pytest.fixture
+def ssh_connection_manager() -> Generator[SSHConnectionManager, None, None]:
     """
     Фикстура для создания менеджера SSH подключений.
 
@@ -28,36 +29,32 @@ def get_all_connections() -> list:
     Returns:
         list: Список содержащий всем активные SSH-соединения
     """
-    connections = []
     with Popen(['lsof', '-a', '-iTCP', '-p', str(os.getpid()), '-n'], stdout=PIPE, encoding='utf8') as proc:
-        for line in proc.stdout:
-            if '->127.0.0.1:10022 (ESTABLISHED)' in line:
-                connections.append(line)
-            elif '->127.0.0.1:10023 (ESTABLISHED)' in line:
-                connections.append(line)
-    return connections
+        return [
+            line
+            for line in proc.stdout
+            if '->127.0.0.1:10022 (ESTABLISHED)' in line or '->127.0.0.1:10023 (ESTABLISHED)' in line
+        ]
 
 
-def check_has_connections():
+def check_has_connections() -> None:
     """Проверка что существуют активное подключение по SSH к тестовому серверу."""
 
     if len(get_all_connections()) == 0:
-        assert False, 'SSH connection not found'
+        raise AssertionError('SSH connection not found')
 
 
-def check_has_not_connections():
+def check_has_not_connections() -> None:
     """Проверка что отсутствует активное подключение по SSH к тестовому серверу."""
 
     if len(get_all_connections()) != 0:
-        assert False, 'SSH connection found'
+        raise AssertionError('SSH connection found')
 
 
-def test_constructor():
+def test_constructor() -> None:
     """Проверка того что создается только один менеджер SSH подключений."""
 
-    # pylint: disable-next=protected-access
     if SSHConnectionManager._instance is not None:
-        # pylint: disable-next=protected-access
         SSHConnectionManager._instance = None
 
     manager1 = SSHConnectionManager('test_ssh_conn_manager_1')
@@ -67,7 +64,7 @@ def test_constructor():
 
 
 @pytest.mark.usefixtures('test_ssh_server')
-def test_get_new_connection(ssh_connection_manager: SSHConnectionManager):
+def test_get_new_connection(ssh_connection_manager: SSHConnectionManager) -> None:
     """
     Проверка создания нового подключения по SSH к тестовому серверу.
 
@@ -77,12 +74,13 @@ def test_get_new_connection(ssh_connection_manager: SSHConnectionManager):
 
     lease_id, connection = ssh_connection_manager.get_connection('127.0.0.1', 10022, 'test_user', 'test_password')
     assert isinstance(connection, paramiko.SSHClient)
-    assert isinstance(lease_id, str) and len(lease_id) == 8
+    assert isinstance(lease_id, str)
+    assert len(lease_id) == 8
     check_has_connections()
 
 
 @pytest.mark.usefixtures('test_ssh_server')
-def test_get_existing_connection(ssh_connection_manager: SSHConnectionManager):
+def test_get_existing_connection(ssh_connection_manager: SSHConnectionManager) -> None:
     """
     Проверка того при запросе нового подключения вернется уже существующее подключения вместо создания нового.
 
@@ -90,15 +88,19 @@ def test_get_existing_connection(ssh_connection_manager: SSHConnectionManager):
         ssh_connection_manager (SSHConnectionManager): Менеджер SSH подключений
     """
 
-    first_lease_id, first_connection = ssh_connection_manager.get_connection('127.0.0.1', 10022,
-                                                                             'test_user', 'test_password')
+    first_lease_id, first_connection = ssh_connection_manager.get_connection(
+        '127.0.0.1', 10022, 'test_user', 'test_password'
+    )
     assert isinstance(first_connection, paramiko.SSHClient)
-    assert isinstance(first_lease_id, str) and len(first_lease_id) == 8
+    assert isinstance(first_lease_id, str)
+    assert len(first_lease_id) == 8
 
-    second_lease_id, second_connection = ssh_connection_manager.get_connection('127.0.0.1', 10022,
-                                                                               'test_user', 'test_password')
+    second_lease_id, second_connection = ssh_connection_manager.get_connection(
+        '127.0.0.1', 10022, 'test_user', 'test_password'
+    )
     assert isinstance(second_connection, paramiko.SSHClient)
-    assert isinstance(second_lease_id, str) and len(second_lease_id) == 8
+    assert isinstance(second_lease_id, str)
+    assert len(second_lease_id) == 8
 
     assert second_connection is first_connection
     assert first_lease_id != second_lease_id
@@ -106,7 +108,7 @@ def test_get_existing_connection(ssh_connection_manager: SSHConnectionManager):
 
 
 @pytest.mark.usefixtures('test_ssh_server')
-def test_get_existing_connection_from_second_manager(ssh_connection_manager: SSHConnectionManager):
+def test_get_existing_connection_from_second_manager(ssh_connection_manager: SSHConnectionManager) -> None:
     """
     Проверка того при запросе нового подключения у "второго" менеджера,
     вернется уже существующее подключения вместо создания нового.
@@ -115,25 +117,29 @@ def test_get_existing_connection_from_second_manager(ssh_connection_manager: SSH
         ssh_connection_manager (SSHConnectionManager): Менеджер SSH подключений
     """
 
-    first_lease_id, first_connection = ssh_connection_manager.get_connection('127.0.0.1', 10022,
-                                                                             'test_user', 'test_password')
+    first_lease_id, first_connection = ssh_connection_manager.get_connection(
+        '127.0.0.1', 10022, 'test_user', 'test_password'
+    )
     assert isinstance(first_connection, paramiko.SSHClient)
-    assert isinstance(first_lease_id, str) and len(first_lease_id) == 8
+    assert isinstance(first_lease_id, str)
+    assert len(first_lease_id) == 8
     check_has_connections()
 
     second_connection_manager = SSHConnectionManager('test_ssh_conn_manager_2')
     assert second_connection_manager is ssh_connection_manager
 
-    second_lease_id, second_connection = second_connection_manager.get_connection('127.0.0.1', 10022,
-                                                                                  'test_user', 'test_password')
+    second_lease_id, second_connection = second_connection_manager.get_connection(
+        '127.0.0.1', 10022, 'test_user', 'test_password'
+    )
     assert isinstance(second_connection, paramiko.SSHClient)
-    assert isinstance(second_lease_id, str) and len(second_lease_id) == 8
+    assert isinstance(second_lease_id, str)
+    assert len(second_lease_id) == 8
     assert second_connection is first_connection
     assert first_lease_id != second_lease_id
     assert len(get_all_connections()) == 1
 
 
-def test_failed_get_new_connection(ssh_connection_manager: SSHConnectionManager):
+def test_failed_get_new_connection(ssh_connection_manager: SSHConnectionManager) -> None:
     """
     Проверка создания нового подключения по SSH к недоступному серверу.
 
@@ -146,7 +152,7 @@ def test_failed_get_new_connection(ssh_connection_manager: SSHConnectionManager)
 
 
 @pytest.mark.usefixtures('test_ssh_server')
-def test_release_connection(ssh_connection_manager: SSHConnectionManager):
+def test_release_connection(ssh_connection_manager: SSHConnectionManager) -> None:
     """
     Проверка освобождения аренды подключения.
 
@@ -160,7 +166,7 @@ def test_release_connection(ssh_connection_manager: SSHConnectionManager):
 
 
 @pytest.mark.usefixtures('test_ssh_server')
-def test_release_two_leases(ssh_connection_manager: SSHConnectionManager):
+def test_release_two_leases(ssh_connection_manager: SSHConnectionManager) -> None:
     """
     Проверка что при освобождения аренды подключения, SSH подключение не закрывается до тех пор,
     пока не будет освобождены все аренды.
@@ -169,10 +175,8 @@ def test_release_two_leases(ssh_connection_manager: SSHConnectionManager):
         ssh_connection_manager (SSHConnectionManager): Менеджер SSH подключений
     """
 
-    first_lease_id, _ = ssh_connection_manager.get_connection('127.0.0.1', 10022,
-                                                              'test_user', 'test_password')
-    second_lease_id, _ = ssh_connection_manager.get_connection('127.0.0.1', 10022,
-                                                               'test_user', 'test_password')
+    first_lease_id, _ = ssh_connection_manager.get_connection('127.0.0.1', 10022, 'test_user', 'test_password')
+    second_lease_id, _ = ssh_connection_manager.get_connection('127.0.0.1', 10022, 'test_user', 'test_password')
 
     ssh_connection_manager.release_connection(first_lease_id)
     check_has_connections()
@@ -181,7 +185,7 @@ def test_release_two_leases(ssh_connection_manager: SSHConnectionManager):
     check_has_not_connections()
 
 
-def test_release_non_existing_connection(ssh_connection_manager: SSHConnectionManager):
+def test_release_non_existing_connection(ssh_connection_manager: SSHConnectionManager) -> None:
     """
     Проверка освобождения несуществующей аренды подключения.
 
@@ -194,7 +198,7 @@ def test_release_non_existing_connection(ssh_connection_manager: SSHConnectionMa
 
 
 @pytest.mark.usefixtures('test_ssh_server')
-def test_destroy_all_connections(ssh_connection_manager: SSHConnectionManager):
+def test_destroy_all_connections(ssh_connection_manager: SSHConnectionManager) -> None:
     """
     Проверка закрытия всех подключений.
 
@@ -202,10 +206,8 @@ def test_destroy_all_connections(ssh_connection_manager: SSHConnectionManager):
         ssh_connection_manager (SSHConnectionManager): Менеджер SSH подключений
     """
 
-    first_lease_id, _ = ssh_connection_manager.get_connection('127.0.0.1', 10022,
-                                                              'test_user', 'test_password')
-    second_lease_id, _ = ssh_connection_manager.get_connection('127.0.0.1', 10023,
-                                                               'test_user', 'test_password')
+    first_lease_id, _ = ssh_connection_manager.get_connection('127.0.0.1', 10022, 'test_user', 'test_password')
+    second_lease_id, _ = ssh_connection_manager.get_connection('127.0.0.1', 10023, 'test_user', 'test_password')
     assert len(get_all_connections()) == 2
 
     ssh_connection_manager.destroy_all_connections()

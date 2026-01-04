@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from httpx import Response
 
 
-@pytest.fixture()
+@pytest.fixture
 def first_host() -> dict:
     """
     Фикстура возвращающая словарь с тестовыми значениями первого хоста.
@@ -20,12 +20,12 @@ def first_host() -> dict:
         'ssh_address': '127.0.0.1',
         'ssh_port': 9022,
         'username': 'test_user_1',
-        'password': 'test_password_1'
+        'password': 'test_password_1',
     }
 
 
-@pytest.fixture()
-def add_first_host_in_db(db_connection: sqlite3.Connection, first_host: dict):
+@pytest.fixture
+def add_first_host_in_db(db_connection: sqlite3.Connection, first_host: dict) -> None:
     """
     Фикстура для добавления первой тестовой записи хоста в базу данных.
 
@@ -35,14 +35,14 @@ def add_first_host_in_db(db_connection: sqlite3.Connection, first_host: dict):
     """
 
     cursor = db_connection.cursor()
-    insert_req = ('INSERT INTO hosts '
-                  f'({", ".join(first_host.keys())}) VALUES '
-                  f'({", ".join(map(repr, first_host.values()))})')
+    insert_req = (
+        f'INSERT INTO hosts ({", ".join(first_host.keys())}) VALUES ({", ".join(map(repr, first_host.values()))})'
+    )
     cursor.execute(insert_req)
     db_connection.commit()
 
 
-@pytest.fixture()
+@pytest.fixture
 def second_host() -> dict:
     """
     Фикстура возвращающая словарь с тестовыми значениями второго хоста.
@@ -57,12 +57,12 @@ def second_host() -> dict:
         'ssh_address': '127.0.0.2',
         'ssh_port': 10022,
         'username': 'test_user_1',
-        'password': 'test_password_2'
+        'password': 'test_password_2',
     }
 
 
-@pytest.fixture()
-def add_second_host_in_db(db_connection: sqlite3.Connection, second_host: dict):
+@pytest.fixture
+def add_second_host_in_db(db_connection: sqlite3.Connection, second_host: dict) -> None:
     """
     Фикстура для добавления второй тестовой записи хоста в базу данных.
 
@@ -72,14 +72,14 @@ def add_second_host_in_db(db_connection: sqlite3.Connection, second_host: dict):
     """
 
     cursor = db_connection.cursor()
-    insert_req = ('INSERT INTO hosts '
-                  f'({", ".join(second_host.keys())}) VALUES '
-                  f'({", ".join(map(repr, second_host.values()))})')
+    insert_req = (
+        f'INSERT INTO hosts ({", ".join(second_host.keys())}) VALUES ({", ".join(map(repr, second_host.values()))})'
+    )
     cursor.execute(insert_req)
     db_connection.commit()
 
 
-def check_record_in_db(db_connection: sqlite3.Connection, record: dict):
+def check_record_in_db(db_connection: sqlite3.Connection, record: dict) -> None:
     """
     Проверка записи хоста в базу данных.
 
@@ -89,12 +89,12 @@ def check_record_in_db(db_connection: sqlite3.Connection, record: dict):
     """
 
     cursor = db_connection.cursor()
-    select_req = 'SELECT * FROM hosts WHERE ' + ' AND '.join((f'{key}={repr(value)}' for key, value in record.items()))
+    select_req = 'SELECT * FROM hosts WHERE ' + ' AND '.join((f'{key}={value!r}' for key, value in record.items()))
     result = cursor.execute(select_req)
     assert result.fetchone() is not None
 
 
-def check_no_record_in_db(db_connection: sqlite3.Connection, record: dict):
+def check_no_record_in_db(db_connection: sqlite3.Connection, record: dict) -> None:
     """
     Проверка отсутствия записи хоста в базу данных.
 
@@ -104,12 +104,12 @@ def check_no_record_in_db(db_connection: sqlite3.Connection, record: dict):
     """
 
     cursor = db_connection.cursor()
-    select_req = 'SELECT * FROM hosts WHERE ' + ' AND '.join((f'{key}={repr(value)}' for key, value in record.items()))
+    select_req = 'SELECT * FROM hosts WHERE ' + ' AND '.join((f'{key}={value!r}' for key, value in record.items()))
     result = cursor.execute(select_req)
     assert result.fetchone() is None
 
 
-def check_response(response: Response, expected_answer: int = 200):
+def check_response(response: Response, expected_answer: int = 200) -> None:
     """
     Проверка ответа приложения на запрос.
 
@@ -124,7 +124,7 @@ def check_response(response: Response, expected_answer: int = 200):
 
 
 @pytest.mark.usefixtures('drop_all_data_in_db')
-def test_post_host(test_client: TestClient, first_host: dict, db_connection: sqlite3.Connection):
+def test_post_host(test_client: TestClient, first_host: dict, db_connection: sqlite3.Connection) -> None:
     """
     Проверка добавления нового хоста.
 
@@ -143,7 +143,7 @@ def test_post_host(test_client: TestClient, first_host: dict, db_connection: sql
 
 
 @pytest.mark.usefixtures('add_first_host_in_db', 'drop_all_data_in_db')
-def test_get_host(test_client: TestClient, first_host: dict):
+def test_get_host(test_client: TestClient, first_host: dict) -> None:
     """
     Проверка получения информации о хосте по его идентификатору.
 
@@ -162,7 +162,7 @@ def test_get_host(test_client: TestClient, first_host: dict):
 
 
 @pytest.mark.usefixtures('add_first_host_in_db', 'drop_all_data_in_db')
-def test_get_nonexisting_host(test_client: TestClient):
+def test_get_nonexisting_host(test_client: TestClient) -> None:
     """
     Проверка получения ответа 404 при попытке получить инфо о несуществующем хосте.
 
@@ -178,7 +178,7 @@ def test_get_nonexisting_host(test_client: TestClient):
 
 
 @pytest.mark.usefixtures('add_first_host_in_db', 'add_second_host_in_db', 'drop_all_data_in_db')
-def test_get_all_hosts(test_client: TestClient, first_host: dict, second_host: dict):
+def test_get_all_hosts(test_client: TestClient, first_host: dict, second_host: dict) -> None:
     """
     Проверка получения информации о всех добавленных хостах.
 
@@ -202,7 +202,7 @@ def test_get_all_hosts(test_client: TestClient, first_host: dict, second_host: d
 
 
 @pytest.mark.usefixtures('add_first_host_in_db', 'drop_all_data_in_db')
-def test_delete_host(test_client: TestClient, first_host: dict, db_connection: sqlite3.Connection):
+def test_delete_host(test_client: TestClient, first_host: dict, db_connection: sqlite3.Connection) -> None:
     """
     Проверка удаления информации о хосте по его идентификатору.
 
@@ -220,7 +220,7 @@ def test_delete_host(test_client: TestClient, first_host: dict, db_connection: s
     assert response_data['detail'] == 'Deleted'
 
 
-def test_delete_nonexisting_host(test_client: TestClient):
+def test_delete_nonexisting_host(test_client: TestClient) -> None:
     """
     Проверка получения ответа 404 при попытке удалить несуществующий хост.
 
@@ -236,7 +236,9 @@ def test_delete_nonexisting_host(test_client: TestClient):
 
 
 @pytest.mark.usefixtures('add_first_host_in_db', 'drop_all_data_in_db')
-def test_update_host(test_client: TestClient, first_host: dict, second_host: dict, db_connection: sqlite3.Connection):
+def test_update_host(
+    test_client: TestClient, first_host: dict, second_host: dict, db_connection: sqlite3.Connection
+) -> None:
     """
     Проверка обновления информации о хосте.
 
@@ -256,7 +258,7 @@ def test_update_host(test_client: TestClient, first_host: dict, second_host: dic
     assert response_data['detail'] == 'Updated'
 
 
-def test_update_nonexisting_host(test_client: TestClient, second_host: dict):
+def test_update_nonexisting_host(test_client: TestClient, second_host: dict) -> None:
     """
     Проверка обновления информации о несуществующем хосте.
 

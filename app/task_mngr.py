@@ -80,7 +80,6 @@ class ProcessTaskManager(context.Process):  # type: ignore
                     returned_value = Exception(f'Unknown command: "{cmd.name}"')
                 else:
                     returned_value = method(cmd)
-            # pylint: disable-next=broad-exception-caught
             except Exception as error:
                 returned_value = error
             self._res_queue.put(TaskManagerResult(returned_value))

@@ -1,16 +1,18 @@
 import os
-import time
 import re
+import time
+from collections.abc import Generator
+from contextlib import suppress
 
 import pytest
-from scapy.all import rdpcap, ICMP  # pylint: disable=no-name-in-module
+from scapy.all import ICMP, rdpcap
 
-from app.task_mngr import TaskManager
 from app.models.task import Task
+from app.task_mngr import TaskManager
 
 
 @pytest.fixture(scope='session')
-def task_manager() -> TaskManager:
+def task_manager() -> Generator[TaskManager, None, None]:
     """
     Фикстура для создания тестового менеджера задач.
 
@@ -27,7 +29,7 @@ def task_manager() -> TaskManager:
 
 
 @pytest.fixture(autouse=True)
-def remove_artifacts():
+def remove_artifacts() -> Generator[None, None, None]:
     """
     Фикстура для удаления артифактов теста.
     """
@@ -35,13 +37,11 @@ def remove_artifacts():
     yield
 
     for filename in ('test_dump.pcap', 'ping.log'):
-        try:
+        with suppress(FileNotFoundError):
             os.remove(filename)
-        except FileNotFoundError:
-            pass
 
 
-def check_captured_pcap_file():
+def check_captured_pcap_file() -> None:
     """Проверка файла 'test_dump.pcap'."""
 
     assert os.path.isfile('test_dump.pcap')
@@ -53,24 +53,24 @@ def check_captured_pcap_file():
     assert len(ping_requests) >= 4
 
 
-def check_captured_log_file():
+def check_captured_log_file() -> None:
     """Проверка файла 'ping.log'."""
 
     assert os.path.isfile('ping.log')
     assert os.path.getsize('ping.log') > 0
 
     count_ping = 0
-    with open('ping.log', 'rt', encoding='utf8') as log_file:
+    with open('ping.log', encoding='utf8') as log_file:
         for line in log_file:
             if re.match(r'64 bytes from 127\.0\.0\.1: seq=\d+ ttl=64 time=\d+\.\d{3} ms', line):
                 count_ping += 1
             else:
-                assert False, f'Unmatched line: {line}'
+                raise AssertionError(f'Unmatched line: {line}')
     assert count_ping >= 4
 
 
 @pytest.mark.usefixtures('test_ssh_server')
-def test_start_pcap_dump(task_manager: TaskManager):
+def test_start_pcap_dump(task_manager: TaskManager) -> None:
     """
     Проверка запуска удаленного сниффера траффика.
 
@@ -78,9 +78,9 @@ def test_start_pcap_dump(task_manager: TaskManager):
         task_manager (TaskManager): Менеджер задач
     """
 
-    task_info = task_manager.start_pcap_dump(address='127.0.0.1', port=10022,
-                                             username='test_user', password='test_password',
-                                             output_file='test_dump.pcap')
+    task_info = task_manager.start_pcap_dump(
+        address='127.0.0.1', port=10022, username='test_user', password='test_password', output_file='test_dump.pcap'
+    )
     assert isinstance(task_info, Task)
     assert task_info.name.endswith(f'pcap_{task_info.task_id}')
     assert task_info.task_type == 'pcap_dump'
@@ -93,7 +93,7 @@ def test_start_pcap_dump(task_manager: TaskManager):
 
 
 @pytest.mark.usefixtures('test_ssh_server')
-def test_get_task_info(task_manager: TaskManager):
+def test_get_task_info(task_manager: TaskManager) -> None:
     """
     Проверка получения информации о запущенной задаче.
 
@@ -101,9 +101,9 @@ def test_get_task_info(task_manager: TaskManager):
         task_manager (TaskManager): Менеджер задач
     """
 
-    task_info = task_manager.start_pcap_dump(address='127.0.0.1', port=10022,
-                                             username='test_user', password='test_password',
-                                             output_file='test_dump.pcap')
+    task_info = task_manager.start_pcap_dump(
+        address='127.0.0.1', port=10022, username='test_user', password='test_password', output_file='test_dump.pcap'
+    )
     assert isinstance(task_info, Task)
     assert task_info.name.endswith(f'pcap_{task_info.task_id}')
     assert task_info.task_type == 'pcap_dump'
@@ -127,7 +127,7 @@ def test_get_task_info(task_manager: TaskManager):
     assert str(e_info.value) == f'Task with id="{task_id}" not found in task list.'
 
 
-def test_get_task_info_non_existing_task(task_manager: TaskManager):
+def test_get_task_info_non_existing_task(task_manager: TaskManager) -> None:
     """
     Проверка получения информации о несуществующей задаче.
 
@@ -141,7 +141,7 @@ def test_get_task_info_non_existing_task(task_manager: TaskManager):
 
 
 @pytest.mark.usefixtures('test_ssh_server')
-def test_start_log_dump(task_manager: TaskManager):
+def test_start_log_dump(task_manager: TaskManager) -> None:
     """
     Проверка запуска удаленного сниффера логов.
 
@@ -149,9 +149,14 @@ def test_start_log_dump(task_manager: TaskManager):
         task_manager (TaskManager): Менеджер задач
     """
 
-    task_info = task_manager.start_log_dump(address='127.0.0.1', port=10022,
-                                            username='test_user', password='test_password',
-                                            output_file='ping.log', dumped_file='/tmp/ping.log')
+    task_info = task_manager.start_log_dump(
+        address='127.0.0.1',
+        port=10022,
+        username='test_user',
+        password='test_password',
+        output_file='ping.log',
+        dumped_file='/tmp/ping.log',
+    )
     assert isinstance(task_info, Task)
     assert task_info.name.endswith(f'log_{task_info.task_id}')
     assert task_info.task_type == 'log_dump'
@@ -164,7 +169,7 @@ def test_start_log_dump(task_manager: TaskManager):
 
 
 @pytest.mark.usefixtures('test_ssh_server')
-def test_stop_task(task_manager: TaskManager):
+def test_stop_task(task_manager: TaskManager) -> None:
     """
     Проверка завершения выполнения задачи.
 
@@ -172,9 +177,14 @@ def test_stop_task(task_manager: TaskManager):
         task_manager (TaskManager): Менеджер задач
     """
 
-    task_info = task_manager.start_log_dump(address='127.0.0.1', port=10022,
-                                            username='test_user', password='test_password',
-                                            output_file='ping.log', dumped_file='/tmp/ping.log')
+    task_info = task_manager.start_log_dump(
+        address='127.0.0.1',
+        port=10022,
+        username='test_user',
+        password='test_password',
+        output_file='ping.log',
+        dumped_file='/tmp/ping.log',
+    )
 
     time.sleep(5)
 
@@ -186,7 +196,7 @@ def test_stop_task(task_manager: TaskManager):
     check_captured_log_file()
 
 
-def test_stop_non_existing_task(task_manager: TaskManager):
+def test_stop_non_existing_task(task_manager: TaskManager) -> None:
     """
     Проверка завершения выполнения несуществующий задачи.
 
@@ -200,7 +210,7 @@ def test_stop_non_existing_task(task_manager: TaskManager):
 
 
 @pytest.mark.usefixtures('test_ssh_server')
-def test_start_two_task(task_manager: TaskManager):
+def test_start_two_task(task_manager: TaskManager) -> None:
     """
     Проверка работы двух задач одновременно.
 
@@ -208,15 +218,20 @@ def test_start_two_task(task_manager: TaskManager):
         task_manager (TaskManager): Менеджер задач
     """
 
-    log_dump_task_info = task_manager.start_log_dump(address='127.0.0.1', port=10022,
-                                                     username='test_user', password='test_password',
-                                                     output_file='ping.log', dumped_file='/tmp/ping.log')
+    log_dump_task_info = task_manager.start_log_dump(
+        address='127.0.0.1',
+        port=10022,
+        username='test_user',
+        password='test_password',
+        output_file='ping.log',
+        dumped_file='/tmp/ping.log',
+    )
     assert isinstance(log_dump_task_info, Task)
     assert log_dump_task_info.is_alive is True
 
-    pcap_dump_task_info = task_manager.start_pcap_dump(address='127.0.0.1', port=10022,
-                                                       username='test_user', password='test_password',
-                                                       output_file='test_dump.pcap')
+    pcap_dump_task_info = task_manager.start_pcap_dump(
+        address='127.0.0.1', port=10022, username='test_user', password='test_password', output_file='test_dump.pcap'
+    )
     assert isinstance(pcap_dump_task_info, Task)
     assert pcap_dump_task_info.is_alive is True
 
@@ -230,7 +245,7 @@ def test_start_two_task(task_manager: TaskManager):
 
 
 @pytest.mark.usefixtures('test_ssh_server')
-def test_get_all_tasks(task_manager: TaskManager):
+def test_get_all_tasks(task_manager: TaskManager) -> None:
     """
     Проверка получения информации о всех запущенных задачах.
 
@@ -238,9 +253,14 @@ def test_get_all_tasks(task_manager: TaskManager):
         task_manager (TaskManager): Менеджер задач
     """
 
-    log_dump_task_id = task_manager.start_log_dump(address='127.0.0.1', port=10022,
-                                                   username='test_user', password='test_password',
-                                                   output_file='ping.log', dumped_file='/tmp/ping.log').task_id
+    log_dump_task_id = task_manager.start_log_dump(
+        address='127.0.0.1',
+        port=10022,
+        username='test_user',
+        password='test_password',
+        output_file='ping.log',
+        dumped_file='/tmp/ping.log',
+    ).task_id
     tasks = task_manager.get_all_tasks()
     assert isinstance(tasks, list)
     assert len(tasks) == 1
@@ -254,9 +274,9 @@ def test_get_all_tasks(task_manager: TaskManager):
 
     time.sleep(1)
 
-    pcap_dump_task_id = task_manager.start_pcap_dump(address='127.0.0.1', port=10022,
-                                                     username='test_user', password='test_password',
-                                                     output_file='test_dump.pcap').task_id
+    pcap_dump_task_id = task_manager.start_pcap_dump(
+        address='127.0.0.1', port=10022, username='test_user', password='test_password', output_file='test_dump.pcap'
+    ).task_id
     tasks = task_manager.get_all_tasks()
     assert isinstance(tasks, list)
     assert len(tasks) == 2

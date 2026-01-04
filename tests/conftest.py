@@ -1,9 +1,10 @@
 import sqlite3
+from collections.abc import Generator
 
 import pytest
-import docker
-from fastapi.testclient import TestClient  # pylint: disable=wrong-import-order
+from fastapi.testclient import TestClient
 
+import docker
 from app.main import app
 
 
@@ -16,12 +17,11 @@ def test_client() -> TestClient:
         TestClient: Тестовый клиент API
     """
 
-    client = TestClient(app)
-    return client
+    return TestClient(app)
 
 
-@pytest.fixture()
-def db_connection() -> sqlite3.Connection:
+@pytest.fixture
+def db_connection() -> Generator[sqlite3.Connection, None, None]:
     """
     Фикстура для создания подключения к базе данных.
     В SETUP происходит подключение к базе, в тест передается объект для взаимодействия с базой,
@@ -38,8 +38,8 @@ def db_connection() -> sqlite3.Connection:
     connection.close()
 
 
-@pytest.fixture()
-def drop_all_data_in_db(db_connection: sqlite3.Connection):
+@pytest.fixture
+def drop_all_data_in_db(db_connection: sqlite3.Connection) -> Generator[None, None, None]:
     """
     Фикстура для удаления всех данных из базы по окончанию теста.
     Все  действия по удалению происходят в TEARDOWN теста.
@@ -57,7 +57,7 @@ def drop_all_data_in_db(db_connection: sqlite3.Connection):
 
 
 @pytest.fixture(scope='session')
-def test_ssh_server():
+def test_ssh_server() -> Generator[None, None, None]:
     """
     Фикстура для запуска Docker контейнера выполняющего роль тестового сервера,
     к которому происходит подключение по SSH протоколу в тестах.
@@ -69,13 +69,10 @@ def test_ssh_server():
     try:
         _ = client.images.get('test_ssh_server')
     except docker.errors.ImageNotFound:
-        _ = client.images.build(path='docker',
-                                tag='test_ssh_server',
-                                network_mode='host')
-    container = client.containers.run(image='test_ssh_server',
-                                      ports={'10022/tcp': [10022, 10023]},
-                                      cap_add=['NET_ADMIN', 'CAP_NET_RAW'],
-                                      detach=True)
+        _ = client.images.build(path='docker', tag='test_ssh_server', network_mode='host')
+    container = client.containers.run(
+        image='test_ssh_server', ports={'10022/tcp': [10022, 10023]}, cap_add=['NET_ADMIN', 'CAP_NET_RAW'], detach=True
+    )
 
     yield
 

@@ -21,10 +21,8 @@ test = [
     "scapy",
     "httpx",
 ]
-linting = [
-    "flake8",
-    "flake8-pylint",
-    "pyproject-flake8",
+dev = [
+    "ruff",
 ]
 
 [tool.uv]

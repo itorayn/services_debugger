@@ -1,9 +1,9 @@
 import logging
 import string
-from threading import Lock
-from typing import Union, Tuple, Generator, Dict
-from random import choices
+from collections.abc import Generator
 from contextlib import contextmanager
+from random import choices
+from threading import Lock
 
 import paramiko
 
@@ -33,16 +33,16 @@ class SSHConnectionManager(metaclass=SingletonMeta):
     может быть создан только один менеджер SSH подключений.
    """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         self.name = name
         self._logger = logging.getLogger(self.name)
         self._logger.info('Start init new SSHConnectionManager')
         self._lock = Lock()
-        self._connections: Dict[Tuple[str, int], paramiko.SSHClient] = {}
-        self._leases: Dict[str, Tuple[str, int]] = {}
+        self._connections: dict[tuple[str, int], paramiko.SSHClient] = {}
+        self._leases: dict[str, tuple[str, int]] = {}
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}(name={repr(self.name)})'
+        return f'{self.__class__.__name__}(name={self.name!r})'
 
     def get_random_lease_id(self) -> str:
         """
@@ -57,8 +57,8 @@ class SSHConnectionManager(metaclass=SingletonMeta):
             return self.get_random_lease_id()
         return lease_id
 
-    def get_connection(self, address: str, port: Union[str, int],
-                       username: str, password: str) -> Tuple[str, paramiko.SSHClient]:
+    def get_connection(self, address: str, port: str | int,
+                       username: str, password: str) -> tuple[str, paramiko.SSHClient]:
         """
         Создание нового SSH подключения,
         если подключение по указанному адресу и порту уже было ранее создано,
@@ -93,7 +93,7 @@ class SSHConnectionManager(metaclass=SingletonMeta):
 
         return lease_id, conn
 
-    def _create_ssh_connection(self, address: str, port: Union[str, int],
+    def _create_ssh_connection(self, address: str, port: str | int,
                                username: str, password: str) -> paramiko.SSHClient:
         self._logger.info(f'Create new SSH connection: {username}:{password}@{address}:{port}')
         ssh_client = paramiko.SSHClient()
@@ -101,7 +101,7 @@ class SSHConnectionManager(metaclass=SingletonMeta):
         ssh_client.connect(hostname=address, username=username, password=password, port=int(port))
         return ssh_client
 
-    def release_connection(self, lease_id: str):
+    def release_connection(self, lease_id: str) -> None:
         """
         Освобождение SSH подключения по идентификатору аренды,
         если подключение используется несколькими элементами,
@@ -130,7 +130,7 @@ class SSHConnectionManager(metaclass=SingletonMeta):
         else:
             self._destroy_connection(*released_connection)
 
-    def _destroy_connection(self, address: str, port: Union[str, int]):
+    def _destroy_connection(self, address: str, port: str | int) -> None:
         destroyed_connection = (address, int(port))
         self._logger.info(f'Close connection: {destroyed_connection}')
 
@@ -139,7 +139,7 @@ class SSHConnectionManager(metaclass=SingletonMeta):
         conn = self._connections.pop(destroyed_connection)
         conn.close()
 
-    def destroy_all_connections(self):
+    def destroy_all_connections(self) -> None:
         """Закрытие всех SSH подключений и аннулирование всех аренд."""
 
         self._logger.info('Destroy all connections')
@@ -153,7 +153,7 @@ class SSHConnectionManager(metaclass=SingletonMeta):
         self._leases.clear()
 
     @contextmanager
-    def connection(self, address: str, port: Union[str, int],
+    def connection(self, address: str, port: str | int,
                    username: str, password: str) -> Generator[paramiko.SSHClient, None, None]:
         """
         Контекстный менеджер подключения. При входе в контекст создает SSH подключение,
@@ -173,5 +173,5 @@ class SSHConnectionManager(metaclass=SingletonMeta):
         yield conn
         self.release_connection(lease_id)
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.destroy_all_connections()
