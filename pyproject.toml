@@ -9,20 +9,18 @@ description = "Service for debug other microservices"
 authors = [{ name = "Vladimir Muzyka", email = "vladimir.muzyka@gmail.com" }]
 requires-python = ">=3.8.0,<4"
 dependencies = [
-    "paramiko",
     "fastapi[standard]",
+    "paramiko",
     "sqlalchemy",
 ]
 
 [dependency-groups]
-test = [
-    "pytest",
-    "docker",
-    "scapy",
-    "httpx",
-]
 dev = [
+    "docker",
+    "httpx",
+    "pytest",
     "ruff",
+    "scapy",
 ]
 
 [tool.uv]
