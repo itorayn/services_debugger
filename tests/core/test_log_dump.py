@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from app.dumpers import LogDump
+from app.core.dumpers import LogDump
 
 
 @pytest.mark.usefixtures('test_ssh_server')

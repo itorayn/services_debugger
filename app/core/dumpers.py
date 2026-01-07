@@ -1,10 +1,10 @@
 import logging
 import select
-from typing import Union, Literal
-from threading import Thread
 from abc import ABC, abstractmethod
+from threading import Thread
 
-from .ssh_conn_mngr import SSHConnectionManager
+from app.core.ssh_conn_mngr import SSHConnectionManager
+from app.models.task import TaskType
 
 
 class DumperError(Exception):
@@ -16,40 +16,35 @@ class Dumper(Thread, ABC):
 
     @property
     @abstractmethod
-    def task_type(self) -> Literal['log_dump', 'pcap_dump']:
-        """Тип сниффера в текстовом виде."""
+    def task_type(self) -> TaskType:
+        """Тип сниффера."""
 
     @property
     @abstractmethod
     def executed_command(self) -> str:
         """Выполняемая команда на удаленном хосте."""
 
-    def __init__(self, name: str, address: str, port: Union[str, int],
-                 username: str, password: str, output_file: str):
+    def __init__(
+        self, name: str, address: str, port: str | int, username: str, password: str, output_file: str
+    ) -> None:
         Thread.__init__(self, name=name, daemon=True)
         self._logger = logging.getLogger(self.name)
-        self._connection_parameters = {
-            "address": address,
-            "port": port,
-            "username": username,
-            "password": password
-        }
+        self._connection_parameters = {'address': address, 'port': port, 'username': username, 'password': password}
         self._need_stop = False
         self._output_file = output_file
 
     def __repr__(self) -> str:
-        repr_value = f'{self.__class__.__name__}(name={repr(self.name)}'
+        repr_value = f'{self.__class__.__name__}(name={self.name!r}'
         for attr_name in ('address', 'port', 'username', 'password'):
             attr_value = repr(self._connection_parameters[attr_name])
             repr_value += f', {attr_name}={attr_value}'
-        repr_value += f', output_file={repr(self._output_file)})'
+        repr_value += f', output_file={self._output_file!r})'
         return repr_value
 
-    def run(self):
+    def run(self) -> None:
         self._logger.info('Starting ...')
         ssh_manager = SSHConnectionManager(f'{self.name}.ssh_mngr')
-        with ssh_manager.connection(**self._connection_parameters) as ssh, \
-             open(self._output_file, 'wb') as output_file:
+        with ssh_manager.connection(**self._connection_parameters) as ssh, open(self._output_file, 'wb') as output_file:
             self._logger.info(f'Execute command: {self.executed_command}')
             _, stdout, stderr = ssh.exec_command(self.executed_command)
             channel = stdout.channel
@@ -70,7 +65,6 @@ class Dumper(Thread, ABC):
                     if event & select.EPOLLIN:
                         while channel.recv_ready():
                             data = stdout.read(len(channel.in_buffer))
-                            # self._logger.error(f'Recived new data: {data.decode(encoding="utf8")}')
                             output_file.write(data)
                         while channel.recv_stderr_ready():
                             data = stderr.read(len(channel.in_stderr_buffer))
@@ -88,7 +82,7 @@ class Dumper(Thread, ABC):
 
             stdout.channel.close()
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Остановка сниффера.
         """
@@ -106,19 +100,20 @@ class LogDump(Dumper):
     SSH канала и запись их в файл.
     """
 
-    task_type = 'log_dump'
+    task_type = TaskType.LOG
 
-    def __init__(self, name: str, address: str, port: Union[str, int],
-                 username: str, password: str, output_file: str, dumped_file: str):
+    def __init__(
+        self, name: str, address: str, port: str | int, username: str, password: str, output_file: str, dumped_file: str
+    ) -> None:
         super().__init__(name, address, port, username, password, output_file)
         self._dumped_file = dumped_file
 
     def __repr__(self) -> str:
-        repr_value = f'{self.__class__.__name__}(name={repr(self.name)}'
+        repr_value = f'{self.__class__.__name__}(name={self.name!r}'
         for attr_name in ('address', 'port', 'username', 'password'):
             attr_value = repr(self._connection_parameters[attr_name])
             repr_value += f', {attr_name}={attr_value}'
-        repr_value += f', output_file={repr(self._output_file)}, dumped_file={repr(self._dumped_file)})'
+        repr_value += f', output_file={self._output_file!r}, dumped_file={self._dumped_file!r})'
         return repr_value
 
     @property
@@ -133,19 +128,27 @@ class PCAPDump(Dumper):
     SSH канала и запись его в файл.
     """
 
-    task_type = 'pcap_dump'
+    task_type = TaskType.PCAP
 
-    def __init__(self, name: str, address: str, port: Union[str, int],
-                 username: str, password: str, output_file: str, dumped_interface: str = 'any'):
+    def __init__(
+        self,
+        name: str,
+        address: str,
+        port: str | int,
+        username: str,
+        password: str,
+        output_file: str,
+        dumped_interface: str = 'any',
+    ) -> None:
         super().__init__(name, address, port, username, password, output_file)
         self._dumped_interface = dumped_interface
 
     def __repr__(self) -> str:
-        repr_value = f'{self.__class__.__name__}(name={repr(self.name)}'
+        repr_value = f'{self.__class__.__name__}(name={self.name!r}'
         for attr_name in ('address', 'port', 'username', 'password'):
             attr_value = repr(self._connection_parameters[attr_name])
             repr_value += f', {attr_name}={attr_value}'
-        repr_value += f', output_file={repr(self._output_file)}, dumped_interface={repr(self._dumped_interface)})'
+        repr_value += f', output_file={self._output_file!r}, dumped_interface={self._dumped_interface!r})'
         return repr_value
 
     @property

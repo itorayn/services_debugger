@@ -4,7 +4,7 @@ import time
 import pytest
 from scapy.all import ICMP, rdpcap
 
-from app.dumpers import PCAPDump
+from app.core.dumpers import PCAPDump
 
 
 @pytest.mark.usefixtures('test_ssh_server')

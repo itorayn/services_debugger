@@ -58,6 +58,9 @@ ignore = [
 [lint.flake8-quotes]
 inline-quotes = "single"
 
+[lint.pylint]
+max-args = 10
+
 [lint.per-file-ignores]
 "tests/**" = [
     "PLR2004",  # Magic value used in comparison

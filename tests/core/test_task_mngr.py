@@ -7,8 +7,8 @@ from contextlib import suppress
 import pytest
 from scapy.all import ICMP, rdpcap
 
+from app.core.task_mngr import TaskManager
 from app.models.task import Task
-from app.task_mngr import TaskManager
 
 
 @pytest.fixture(scope='session')

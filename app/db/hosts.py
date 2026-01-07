@@ -1,35 +1,36 @@
 import logging
-from typing import List
 
-from sqlalchemy import create_engine, MetaData, Table, String, Integer, Column
+from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine
 
-from app.singleton import Singleton
+from app.core.singleton import SingletonMeta
 from app.models.host import Host
-
 
 metadata = MetaData()
 engine = create_engine('sqlite:///test.db')
 
-hosts = Table('hosts', metadata,
-              Column('host_id', Integer(), primary_key=True),
-              Column('name', String(32), nullable=False),
-              Column('description', String(256), nullable=True),
-              Column('ssh_address', String(256), nullable=False),
-              Column('ssh_port', Integer(), default=22, nullable=False),
-              Column('username', String(256), nullable=False),
-              Column('password', String(256), nullable=False))
+hosts = Table(
+    'hosts',
+    metadata,
+    Column('host_id', Integer(), primary_key=True),
+    Column('name', String(32), nullable=False),
+    Column('description', String(256), nullable=True),
+    Column('ssh_address', String(256), nullable=False),
+    Column('ssh_port', Integer(), default=22, nullable=False),
+    Column('username', String(256), nullable=False),
+    Column('password', String(256), nullable=False),
+)
 
 metadata.create_all(engine)
 
 
-class HostRepository(Singleton):
+class HostRepository(metaclass=SingletonMeta):
     """
     Класс для выполнения CRUD операций с хостами в базе данных.
     В классе HostRepository используется паттерн "одиночка",
     может быть создан только один экземпляр.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._logger = logging.getLogger('host_repo')
 
     def add_host(self, host: Host) -> int:
@@ -44,9 +45,7 @@ class HostRepository(Singleton):
         """
 
         self._logger.info(f'Creating a host in the database: {host}')
-        insert_request = hosts.insert().values(
-            **host.model_dump(exclude_unset=True)
-        )
+        insert_request = hosts.insert().values(**host.model_dump(exclude_unset=True))
         with engine.connect() as conn:
             response = conn.execute(insert_request)
             host_id = response.inserted_primary_key[0]
@@ -54,7 +53,7 @@ class HostRepository(Singleton):
         self._logger.info(f'Created a host in the database: {host_id}')
         return host_id
 
-    def get_all_hosts(self) -> List[Host]:
+    def get_all_hosts(self) -> list[Host]:
         """
         Получить все записи хостов из базы данных.
 
@@ -84,16 +83,14 @@ class HostRepository(Singleton):
 
         self._logger.info(f'Retrieving host by id {host_id}')
         with engine.connect() as conn:
-            select_request = hosts.select().where(
-                hosts.c.host_id == host_id
-            )
+            select_request = hosts.select().where(hosts.c.host_id == host_id)
             response = conn.execute(select_request)
         data = response.first()
         if data is None:
             raise LookupError
         return Host.from_orm(data)
 
-    def delete_host(self, host_id: int):
+    def delete_host(self, host_id: int) -> None:
         """
         Удалить запись хоста из базы данных.
 
@@ -106,15 +103,13 @@ class HostRepository(Singleton):
 
         self._logger.info(f'Deleting host with id {host_id}')
         with engine.connect() as conn:
-            delete_request = hosts.delete().where(
-                hosts.c.host_id == host_id
-            )
+            delete_request = hosts.delete().where(hosts.c.host_id == host_id)
             response = conn.execute(delete_request)
             conn.commit()
         if response.rowcount == 0:
             raise LookupError
 
-    def update_host(self, host: Host, host_id: int):
+    def update_host(self, host: Host, host_id: int) -> None:
         """
         Обновить запись хоста в базе данных.
 
@@ -128,10 +123,8 @@ class HostRepository(Singleton):
 
         self._logger.info(f'Updating host with id {host_id}, {host}')
         with engine.connect() as conn:
-            update_request = hosts.update().where(
-                hosts.c.host_id == host_id
-            ).values(
-                **host.model_dump(exclude_unset=True)
+            update_request = (
+                hosts.update().where(hosts.c.host_id == host_id).values(**host.model_dump(exclude_unset=True))
             )
             response = conn.execute(update_request)
             conn.commit()

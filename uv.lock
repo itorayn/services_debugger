@@ -2601,14 +2601,12 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "ruff" },
-]
-test = [
     { name = "docker" },
     { name = "httpx" },
     { name = "pytest", version = "8.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "pytest", version = "8.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
     { name = "pytest", version = "9.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "ruff" },
     { name = "scapy" },
 ]
 
@@ -2620,11 +2618,11 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ruff" }]
-test = [
+dev = [
     { name = "docker" },
     { name = "httpx" },
     { name = "pytest" },
+    { name = "ruff" },
     { name = "scapy" },
 ]
 

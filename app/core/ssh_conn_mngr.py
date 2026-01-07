@@ -7,20 +7,7 @@ from threading import Lock
 
 import paramiko
 
-
-class SingletonMeta(type):
-    """
-    Потокобезопасная реализация метакласса Singleton.
-    """
-
-    _instance = None
-    _lock: Lock = Lock()
-
-    def __call__(cls, *args, **kwargs):
-        with cls._lock:
-            if cls._instance is None:
-                cls._instance = super().__call__(*args, **kwargs)
-        return cls._instance
+from .singleton import SingletonMeta
 
 
 class SSHConnectionManager(metaclass=SingletonMeta):
@@ -31,13 +18,13 @@ class SSHConnectionManager(metaclass=SingletonMeta):
         - контроль выданных SSH подключений.
     В классе SSHConnectionManager используется паттерн "одиночка",
     может быть создан только один менеджер SSH подключений.
-   """
+    """
 
     def __init__(self, name: str) -> None:
         self.name = name
         self._logger = logging.getLogger(self.name)
         self._logger.info('Start init new SSHConnectionManager')
-        self._lock = Lock()
+        self._ssh_lock = Lock()
         self._connections: dict[tuple[str, int], paramiko.SSHClient] = {}
         self._leases: dict[str, tuple[str, int]] = {}
 
@@ -57,8 +44,9 @@ class SSHConnectionManager(metaclass=SingletonMeta):
             return self.get_random_lease_id()
         return lease_id
 
-    def get_connection(self, address: str, port: str | int,
-                       username: str, password: str) -> tuple[str, paramiko.SSHClient]:
+    def get_connection(
+        self, address: str, port: str | int, username: str, password: str
+    ) -> tuple[str, paramiko.SSHClient]:
         """
         Создание нового SSH подключения,
         если подключение по указанному адресу и порту уже было ранее создано,
@@ -76,7 +64,7 @@ class SSHConnectionManager(metaclass=SingletonMeta):
         """
 
         self._logger.info(f'Request new SSH connection: {username}:{password}@{address}:{port}')
-        with self._lock:
+        with self._ssh_lock:
             self._logger.debug(f'Open connections: {self._connections}')
             self._logger.debug(f'Active leases: {self._leases}')
             lease_id = self.get_random_lease_id()
@@ -87,14 +75,12 @@ class SSHConnectionManager(metaclass=SingletonMeta):
                 # Create new connection
                 conn = self._create_ssh_connection(address, port, username, password)
                 self._connections[(address, int(port))] = conn
-            self._logger.info(f'Create new lease connection: {lease_id}, '
-                              f'connection: {(address, int(port))}')
+            self._logger.info(f'Create new lease connection: {lease_id}, connection: {(address, int(port))}')
             self._leases[lease_id] = (address, int(port))
 
         return lease_id, conn
 
-    def _create_ssh_connection(self, address: str, port: str | int,
-                               username: str, password: str) -> paramiko.SSHClient:
+    def _create_ssh_connection(self, address: str, port: str | int, username: str, password: str) -> paramiko.SSHClient:
         self._logger.info(f'Create new SSH connection: {username}:{password}@{address}:{port}')
         ssh_client = paramiko.SSHClient()
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -153,8 +139,9 @@ class SSHConnectionManager(metaclass=SingletonMeta):
         self._leases.clear()
 
     @contextmanager
-    def connection(self, address: str, port: str | int,
-                   username: str, password: str) -> Generator[paramiko.SSHClient, None, None]:
+    def connection(
+        self, address: str, port: str | int, username: str, password: str
+    ) -> Generator[paramiko.SSHClient, None, None]:
         """
         Контекстный менеджер подключения. При входе в контекст создает SSH подключение,
         а при выходе из контекста освобождает аренду подключения.

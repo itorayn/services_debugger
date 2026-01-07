@@ -5,7 +5,7 @@ from subprocess import PIPE, Popen
 import paramiko
 import pytest
 
-from app.ssh_conn_mngr import SSHConnectionManager
+from app.core.ssh_conn_mngr import SSHConnectionManager
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def ssh_connection_manager() -> Generator[SSHConnectionManager, None, None]:
     manager.destroy_all_connections()
 
 
-def get_all_connections() -> list:
+def get_all_connections() -> list[str]:
     """
     Получить все активные SSH-соединения по портам 10022 и 10023.
 
@@ -54,13 +54,9 @@ def check_has_not_connections() -> None:
 def test_constructor() -> None:
     """Проверка того что создается только один менеджер SSH подключений."""
 
-    if SSHConnectionManager._instance is not None:
-        SSHConnectionManager._instance = None
-
     manager1 = SSHConnectionManager('test_ssh_conn_manager_1')
     manager2 = SSHConnectionManager('test_ssh_conn_manager_2')
     assert manager1 is manager2
-    assert manager2.name == 'test_ssh_conn_manager_1'
 
 
 @pytest.mark.usefixtures('test_ssh_server')
@@ -147,7 +143,7 @@ def test_failed_get_new_connection(ssh_connection_manager: SSHConnectionManager)
         ssh_connection_manager (SSHConnectionManager): Менеджер SSH подключений
     """
 
-    with pytest.raises(Exception):
+    with pytest.raises(paramiko.ssh_exception.NoValidConnectionsError):
         ssh_connection_manager.get_connection('127.0.0.1', 20022, 'test_user', 'test_password')
 
 

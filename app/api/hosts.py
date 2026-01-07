@@ -1,16 +1,13 @@
-from typing import List
-
 from fastapi import APIRouter, HTTPException
 
-from app.models.host import Host
 from app.db.hosts import host_repo
-
+from app.models.host import Host
 
 hosts_api = APIRouter()
 
 
 @hosts_api.post('/api/v1/hosts')
-def add_host(host: Host):
+def add_host(host: Host) -> dict[str, int]:
     """Добавление новой записи хоста."""
 
     new_host_id = host_repo.add_host(host)
@@ -18,11 +15,10 @@ def add_host(host: Host):
 
 
 @hosts_api.get('/api/v1/hosts')
-def get_all_hosts() -> List[Host]:
+def get_all_hosts() -> list[Host]:
     """Извлечение всех записей хостов."""
 
-    hosts = host_repo.get_all_hosts()
-    return hosts
+    return host_repo.get_all_hosts()
 
 
 @hosts_api.get('/api/v1/hosts/{host_id}')
@@ -38,7 +34,7 @@ def get_host(host_id: int) -> Host:
 
 
 @hosts_api.delete('/api/v1/hosts/{host_id}')
-def delete_host(host_id: int):
+def delete_host(host_id: int) -> dict[str, str]:
     """Удаление записи хоста с указанными идентификатором."""
 
     try:
@@ -49,7 +45,7 @@ def delete_host(host_id: int):
 
 
 @hosts_api.put('/api/v1/hosts/{host_id}')
-def update_host(host: Host, host_id: int):
+def update_host(host: Host, host_id: int) -> dict[str, str]:
     """Обновление записи хосте."""
 
     try:
