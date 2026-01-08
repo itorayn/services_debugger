@@ -5,9 +5,10 @@ from collections.abc import Generator
 from contextlib import suppress
 
 import pytest
-from scapy.all import ICMP, rdpcap
+from scapy.all import ICMP, rdpcap  # type: ignore[attr-defined]
 
 from app.core.task_mngr import TaskManager
+from app.models.host import Host
 from app.models.task import Task
 
 
@@ -79,9 +80,16 @@ def test_start_pcap_dump(task_manager: TaskManager) -> None:
     """
 
     task_info = task_manager.start_pcap_dump(
-        address='127.0.0.1', port=10022, username='test_user', password='test_password', output_file='test_dump.pcap'
+        host=Host(
+            ssh_address='127.0.0.1',
+            ssh_port=10022,
+            username='test_user',
+            password='test_password',
+        ),
+        output_file='test_dump.pcap',
     )
     assert isinstance(task_info, Task)
+    assert task_info.task_id is not None
     assert task_info.name.endswith(f'pcap_{task_info.task_id}')
     assert task_info.task_type == 'pcap_dump'
     assert task_info.is_alive is True
@@ -102,9 +110,16 @@ def test_get_task_info(task_manager: TaskManager) -> None:
     """
 
     task_info = task_manager.start_pcap_dump(
-        address='127.0.0.1', port=10022, username='test_user', password='test_password', output_file='test_dump.pcap'
+        host=Host(
+            ssh_address='127.0.0.1',
+            ssh_port=10022,
+            username='test_user',
+            password='test_password',
+        ),
+        output_file='test_dump.pcap',
     )
     assert isinstance(task_info, Task)
+    assert task_info.task_id is not None
     assert task_info.name.endswith(f'pcap_{task_info.task_id}')
     assert task_info.task_type == 'pcap_dump'
     assert task_info.is_alive is True
@@ -114,6 +129,7 @@ def test_get_task_info(task_manager: TaskManager) -> None:
 
     task_info = task_manager.get_task_info(task_id)
     assert isinstance(task_info, Task)
+    assert task_info.task_id is not None
     assert isinstance(task_info.name, str)
     assert task_info.name.endswith(f'pcap_{task_id}')
     assert task_info.task_id == task_id
@@ -150,14 +166,17 @@ def test_start_log_dump(task_manager: TaskManager) -> None:
     """
 
     task_info = task_manager.start_log_dump(
-        address='127.0.0.1',
-        port=10022,
-        username='test_user',
-        password='test_password',
+        host=Host(
+            ssh_address='127.0.0.1',
+            ssh_port=10022,
+            username='test_user',
+            password='test_password',
+        ),
         output_file='ping.log',
         dumped_file='/tmp/ping.log',
     )
     assert isinstance(task_info, Task)
+    assert task_info.task_id is not None
     assert task_info.name.endswith(f'log_{task_info.task_id}')
     assert task_info.task_type == 'log_dump'
     assert task_info.is_alive is True
@@ -178,18 +197,23 @@ def test_stop_task(task_manager: TaskManager) -> None:
     """
 
     task_info = task_manager.start_log_dump(
-        address='127.0.0.1',
-        port=10022,
-        username='test_user',
-        password='test_password',
+        host=Host(
+            ssh_address='127.0.0.1',
+            ssh_port=10022,
+            username='test_user',
+            password='test_password',
+        ),
         output_file='ping.log',
         dumped_file='/tmp/ping.log',
     )
+    assert isinstance(task_info, Task)
+    assert task_info.task_id is not None
 
     time.sleep(5)
 
     task_info = task_manager.stop_task(task_info.task_id)
     assert isinstance(task_info, Task)
+    assert task_info.task_id is not None
     assert task_info.name.endswith(f'log_{task_info.task_id}')
     assert task_info.task_type == 'log_dump'
     assert task_info.is_alive is False
@@ -219,20 +243,30 @@ def test_start_two_task(task_manager: TaskManager) -> None:
     """
 
     log_dump_task_info = task_manager.start_log_dump(
-        address='127.0.0.1',
-        port=10022,
-        username='test_user',
-        password='test_password',
+        host=Host(
+            ssh_address='127.0.0.1',
+            ssh_port=10022,
+            username='test_user',
+            password='test_password',
+        ),
         output_file='ping.log',
         dumped_file='/tmp/ping.log',
     )
     assert isinstance(log_dump_task_info, Task)
+    assert log_dump_task_info.task_id is not None
     assert log_dump_task_info.is_alive is True
 
     pcap_dump_task_info = task_manager.start_pcap_dump(
-        address='127.0.0.1', port=10022, username='test_user', password='test_password', output_file='test_dump.pcap'
+        host=Host(
+            ssh_address='127.0.0.1',
+            ssh_port=10022,
+            username='test_user',
+            password='test_password',
+        ),
+        output_file='test_dump.pcap',
     )
     assert isinstance(pcap_dump_task_info, Task)
+    assert pcap_dump_task_info.task_id is not None
     assert pcap_dump_task_info.is_alive is True
 
     time.sleep(5)
@@ -254,13 +288,16 @@ def test_get_all_tasks(task_manager: TaskManager) -> None:
     """
 
     log_dump_task_id = task_manager.start_log_dump(
-        address='127.0.0.1',
-        port=10022,
-        username='test_user',
-        password='test_password',
+        host=Host(
+            ssh_address='127.0.0.1',
+            ssh_port=10022,
+            username='test_user',
+            password='test_password',
+        ),
         output_file='ping.log',
         dumped_file='/tmp/ping.log',
     ).task_id
+    assert log_dump_task_id is not None
     tasks = task_manager.get_all_tasks()
     assert isinstance(tasks, list)
     assert len(tasks) == 1
@@ -275,8 +312,15 @@ def test_get_all_tasks(task_manager: TaskManager) -> None:
     time.sleep(1)
 
     pcap_dump_task_id = task_manager.start_pcap_dump(
-        address='127.0.0.1', port=10022, username='test_user', password='test_password', output_file='test_dump.pcap'
+        host=Host(
+            ssh_address='127.0.0.1',
+            ssh_port=10022,
+            username='test_user',
+            password='test_password',
+        ),
+        output_file='test_dump.pcap',
     ).task_id
+    assert pcap_dump_task_id is not None
     tasks = task_manager.get_all_tasks()
     assert isinstance(tasks, list)
     assert len(tasks) == 2

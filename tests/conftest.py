@@ -1,5 +1,6 @@
 import sqlite3
 from collections.abc import Generator
+from time import sleep
 
 import pytest
 from fastapi.testclient import TestClient
@@ -71,8 +72,22 @@ def test_ssh_server() -> Generator[None, None, None]:
     except docker.errors.ImageNotFound:
         _ = client.images.build(path='docker', tag='test_ssh_server', network_mode='host')
     container = client.containers.run(
-        image='test_ssh_server', ports={'10022/tcp': [10022, 10023]}, cap_add=['NET_ADMIN', 'CAP_NET_RAW'], detach=True
+        image='test_ssh_server',
+        ports={'10022/tcp': [10022, 10023]},
+        cap_add=['NET_ADMIN', 'CAP_NET_RAW'],
+        remove=True,
+        detach=True,
     )
+
+    for _attempt in range(30):
+        container_info = client.api.inspect_container(container.name)
+        health_status = container_info['State']['Health']['Status']
+        if health_status == 'healthy':
+            break
+        sleep(1)
+    else:
+        container.stop()
+        raise TimeoutError('Test SSH server is not healthy state')
 
     yield
 

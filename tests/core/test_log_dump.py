@@ -5,6 +5,7 @@ import time
 import pytest
 
 from app.core.dumpers import LogDump
+from app.models.host import Host
 
 
 @pytest.mark.usefixtures('test_ssh_server')
@@ -13,10 +14,12 @@ def test_log_dumper() -> None:
 
     dumper = LogDump(
         name='log_dump',
-        address='127.0.0.1',
-        port=10022,
-        username='test_user',
-        password='test_password',
+        host=Host(
+            ssh_address='127.0.0.1',
+            ssh_port=10022,
+            username='test_user',
+            password='test_password',
+        ),
         output_file='ping.log',
         dumped_file='/tmp/ping.log',
     )

@@ -7,7 +7,7 @@ name = "service_debugger"
 version = "0.0.2"
 description = "Service for debug other microservices"
 authors = [{ name = "Vladimir Muzyka", email = "vladimir.muzyka@gmail.com" }]
-requires-python = ">=3.8.0,<4"
+requires-python = ">=3.12.0,<4"
 dependencies = [
     "fastapi[standard]",
     "paramiko",
@@ -18,6 +18,8 @@ dependencies = [
 dev = [
     "docker",
     "httpx",
+    "mypy",
+    "types-paramiko",
     "pytest",
     "ruff",
     "scapy",

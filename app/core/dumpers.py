@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from threading import Thread
 
 from app.core.ssh_conn_mngr import SSHConnectionManager
+from app.models.host import Host
 from app.models.task import TaskType
 
 
@@ -24,27 +25,28 @@ class Dumper(Thread, ABC):
     def executed_command(self) -> str:
         """Выполняемая команда на удаленном хосте."""
 
-    def __init__(
-        self, name: str, address: str, port: str | int, username: str, password: str, output_file: str
-    ) -> None:
+    def __init__(self, name: str, host: Host, output_file: str) -> None:
         Thread.__init__(self, name=name, daemon=True)
         self._logger = logging.getLogger(self.name)
-        self._connection_parameters = {'address': address, 'port': port, 'username': username, 'password': password}
+        self._host: Host = host
         self._need_stop = False
         self._output_file = output_file
 
     def __repr__(self) -> str:
-        repr_value = f'{self.__class__.__name__}(name={self.name!r}'
-        for attr_name in ('address', 'port', 'username', 'password'):
-            attr_value = repr(self._connection_parameters[attr_name])
-            repr_value += f', {attr_name}={attr_value}'
-        repr_value += f', output_file={self._output_file!r})'
-        return repr_value
+        return f'{self.__class__.__name__}(name={self.name!r}, host={self._host!r}, output_file={self._output_file!r})'
 
     def run(self) -> None:
         self._logger.info('Starting ...')
         ssh_manager = SSHConnectionManager(f'{self.name}.ssh_mngr')
-        with ssh_manager.connection(**self._connection_parameters) as ssh, open(self._output_file, 'wb') as output_file:
+        with (
+            ssh_manager.connection(
+                address=self._host.ssh_address,
+                port=self._host.ssh_port,
+                username=self._host.username,
+                password=self._host.password,
+            ) as ssh,
+            open(self._output_file, 'wb') as output_file,
+        ):
             self._logger.info(f'Execute command: {self.executed_command}')
             _, stdout, stderr = ssh.exec_command(self.executed_command)
             channel = stdout.channel
@@ -102,19 +104,15 @@ class LogDump(Dumper):
 
     task_type = TaskType.LOG
 
-    def __init__(
-        self, name: str, address: str, port: str | int, username: str, password: str, output_file: str, dumped_file: str
-    ) -> None:
-        super().__init__(name, address, port, username, password, output_file)
+    def __init__(self, name: str, host: Host, output_file: str, dumped_file: str) -> None:
+        super().__init__(name, host, output_file)
         self._dumped_file = dumped_file
 
     def __repr__(self) -> str:
-        repr_value = f'{self.__class__.__name__}(name={self.name!r}'
-        for attr_name in ('address', 'port', 'username', 'password'):
-            attr_value = repr(self._connection_parameters[attr_name])
-            repr_value += f', {attr_name}={attr_value}'
-        repr_value += f', output_file={self._output_file!r}, dumped_file={self._dumped_file!r})'
-        return repr_value
+        return (
+            f'{self.__class__.__name__}(name={self.name!r}, host={self._host!r}, '
+            f'output_file={self._output_file!r}, dumped_file={self._dumped_file!r})'
+        )
 
     @property
     def executed_command(self) -> str:
@@ -133,23 +131,18 @@ class PCAPDump(Dumper):
     def __init__(
         self,
         name: str,
-        address: str,
-        port: str | int,
-        username: str,
-        password: str,
+        host: Host,
         output_file: str,
         dumped_interface: str = 'any',
     ) -> None:
-        super().__init__(name, address, port, username, password, output_file)
+        super().__init__(name, host, output_file)
         self._dumped_interface = dumped_interface
 
     def __repr__(self) -> str:
-        repr_value = f'{self.__class__.__name__}(name={self.name!r}'
-        for attr_name in ('address', 'port', 'username', 'password'):
-            attr_value = repr(self._connection_parameters[attr_name])
-            repr_value += f', {attr_name}={attr_value}'
-        repr_value += f', output_file={self._output_file!r}, dumped_interface={self._dumped_interface!r})'
-        return repr_value
+        return (
+            f'{self.__class__.__name__}(name={self.name!r}, host={self._host!r}, '
+            f'output_file={self._output_file!r}, dumped_interface={self._dumped_interface!r})'
+        )
 
     @property
     def executed_command(self) -> str:

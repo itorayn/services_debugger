@@ -1,5 +1,5 @@
 from threading import Lock
-from typing import Any, ClassVar, TypeVar
+from typing import Any, TypeVar
 
 T = TypeVar('T', bound=object)
 
@@ -7,7 +7,7 @@ T = TypeVar('T', bound=object)
 class SingletonMeta[T](type):
     """Потокобезопасная реализация класса Singleton (Одиночка)."""
 
-    _instances: ClassVar[dict[type[T], T]] = {}
+    _instances: dict['SingletonMeta[T]', T] = {}  # noqa: RUF012
     _lock: Lock = Lock()
 
     def __call__(cls, *args: Any, **kwargs: Any) -> T:  # noqa: ANN401

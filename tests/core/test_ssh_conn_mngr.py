@@ -32,7 +32,7 @@ def get_all_connections() -> list[str]:
     with Popen(['lsof', '-a', '-iTCP', '-p', str(os.getpid()), '-n'], stdout=PIPE, encoding='utf8') as proc:
         return [
             line
-            for line in proc.stdout
+            for line in proc.stdout  # type: ignore[union-attr]
             if '->127.0.0.1:10022 (ESTABLISHED)' in line or '->127.0.0.1:10023 (ESTABLISHED)' in line
         ]
 

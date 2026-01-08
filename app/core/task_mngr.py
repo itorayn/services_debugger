@@ -9,10 +9,10 @@ from queue import Empty
 from random import choices
 from typing import Any
 
+from app.core.dumpers import Dumper, LogDump, PCAPDump
+from app.core.ssh_conn_mngr import SSHConnectionManager
+from app.models.host import Host
 from app.models.task import Task
-
-from .dumpers import Dumper, LogDump, PCAPDump
-from .ssh_conn_mngr import SSHConnectionManager
 
 
 @dataclass
@@ -38,7 +38,7 @@ class TaskManagerResult:
 context = multiprocessing.get_context('spawn')
 
 
-class ProcessTaskManager(context.Process):
+class ProcessTaskManager(context.Process):  # type: ignore[name-defined]
     """
     Бековая часть менеджер задач. Работает в субпроцессе и выполняет следующие функции:
         - инициализацию менеджера SSH подключений;
@@ -170,9 +170,8 @@ class TaskManager:
         self.name = name
         self.timeout = timeout
         self._logger = logging.getLogger(self.name)
-        self._process = None
-        self._log_thread = None
-        self._need_stop = None
+        self._process: ProcessTaskManager | None = None
+        self._log_thread: LogProxyThread | None = None
         self._log_queue: multiprocessing.Queue[logging.LogRecord] = context.Queue()
         self._cmd_queue: multiprocessing.Queue[TaskManagerCommand] = context.Queue()
         self._res_queue: multiprocessing.Queue[TaskManagerResult] = context.Queue()
@@ -207,36 +206,29 @@ class TaskManager:
 
         return result
 
-    def start_pcap_dump(self, address: str, port: str | int, username: str, password: str, output_file: str) -> Task:
+    def start_pcap_dump(self, host: Host, output_file: str) -> Task:
         """
         Запуск удаленного сниффера траффика.
 
         Args:
-            address (str): Адрес хоста на котором необходимо запустить tcpdump
-            port (Union[str, int]): Порт для подключения по SSH
-            username (str): Имя пользователя подключения по SSH
-            password (str): Пароль пользователя подключения по SSH
+            host (Host): Data-object хоста на котором необходимо запустить tcpdump
             output_file (str): Путь к локальному файлу в который необходимо записать захваченный траффик
 
         Returns:
             Task: Объект задачи
         """
 
-        command = TaskManagerCommand(name='start_pcap_dump', args=[address, port, username, password, output_file])
+        command = TaskManagerCommand(name='start_pcap_dump', args=[host, output_file])
         result = self._send_rpc_command(command)
+        assert isinstance(result.data, Task)
         return result.data
 
-    def start_log_dump(
-        self, address: str, port: str | int, username: str, password: str, output_file: str, dumped_file: str
-    ) -> Task:
+    def start_log_dump(self, host: Host, output_file: str, dumped_file: str) -> Task:
         """
         Запуск удаленного сниффера логов.
 
         Args:
-            address (str): Адрес хоста на котором необходимо запустить захват логов
-            port (Union[str, int]): Порт для подключения по SSH
-            username (str): Имя пользователя подключения по SSH
-            password (str): Пароль пользователя подключения по SSH
+            host (Host): Data-object хоста на котором необходимо запустить tcpdump
             output_file (str): Путь к локальному файлу в который необходимо записать захваченные логи
             dumped_file (str): Путь у удаленному файлу логов
 
@@ -244,10 +236,9 @@ class TaskManager:
             Task: Объект задачи
         """
 
-        command = TaskManagerCommand(
-            name='start_log_dump', args=[address, port, username, password, output_file, dumped_file]
-        )
+        command = TaskManagerCommand(name='start_log_dump', args=[host, output_file, dumped_file])
         result = self._send_rpc_command(command)
+        assert isinstance(result.data, Task)
         return result.data
 
     def get_task_info(self, task_id: str) -> Task:
@@ -263,6 +254,7 @@ class TaskManager:
 
         command = TaskManagerCommand(name='get_task_info', args=[task_id])
         result = self._send_rpc_command(command)
+        assert isinstance(result.data, Task)
         return result.data
 
     def get_all_tasks(self) -> list[Task]:
@@ -290,6 +282,7 @@ class TaskManager:
 
         command = TaskManagerCommand(name='stop_task', args=[task_id])
         result = self._send_rpc_command(command)
+        assert isinstance(result.data, Task)
         return result.data
 
     def stop(self) -> None:

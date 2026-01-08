@@ -48,6 +48,7 @@ class HostRepository(metaclass=SingletonMeta):
         insert_request = hosts.insert().values(**host.model_dump(exclude_unset=True))
         with engine.connect() as conn:
             response = conn.execute(insert_request)
+            assert response.inserted_primary_key is not None
             host_id = response.inserted_primary_key[0]
             conn.commit()
         self._logger.info(f'Created a host in the database: {host_id}')
@@ -65,7 +66,7 @@ class HostRepository(metaclass=SingletonMeta):
         with engine.connect() as conn:
             select_request = hosts.select()
             response = conn.execute(select_request)
-        return [Host.from_orm(data) for data in response.fetchall()]
+        return [Host.model_validate(data) for data in response.fetchall()]
 
     def get_host(self, host_id: int) -> Host:
         """
@@ -88,7 +89,7 @@ class HostRepository(metaclass=SingletonMeta):
         data = response.first()
         if data is None:
             raise LookupError
-        return Host.from_orm(data)
+        return Host.model_validate(data)
 
     def delete_host(self, host_id: int) -> None:
         """

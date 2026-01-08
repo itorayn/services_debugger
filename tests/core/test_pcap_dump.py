@@ -2,9 +2,10 @@ import os
 import time
 
 import pytest
-from scapy.all import ICMP, rdpcap
+from scapy.all import ICMP, rdpcap  # type: ignore[attr-defined]
 
 from app.core.dumpers import PCAPDump
+from app.models.host import Host
 
 
 @pytest.mark.usefixtures('test_ssh_server')
@@ -13,10 +14,12 @@ def test_pcap_dumper() -> None:
 
     dumper = PCAPDump(
         name='pcap_dump',
-        address='127.0.0.1',
-        port=10022,
-        username='test_user',
-        password='test_password',
+        host=Host(
+            ssh_address='127.0.0.1',
+            ssh_port=10022,
+            username='test_user',
+            password='test_password',
+        ),
         output_file='test_dump.pcap',
     )
     dumper.start()
