@@ -38,7 +38,7 @@ class TaskManagerResult:
 context = multiprocessing.get_context('spawn')
 
 
-class ProcessTaskManager(context.Process):  # type: ignore[name-defined]
+class ProcessTaskManager(context.Process):  # type: ignore[name-defined, misc]
     """
     Бековая часть менеджер задач. Работает в субпроцессе и выполняет следующие функции:
         - инициализацию менеджера SSH подключений;
@@ -267,6 +267,7 @@ class TaskManager:
 
         command = TaskManagerCommand(name='get_all_tasks')
         result = self._send_rpc_command(command)
+        assert isinstance(result.data, list)
         return result.data
 
     def stop_task(self, task_id: str) -> Task:

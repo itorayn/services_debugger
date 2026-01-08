@@ -50,6 +50,7 @@ class HostRepository(metaclass=SingletonMeta):
             response = conn.execute(insert_request)
             assert response.inserted_primary_key is not None
             host_id = response.inserted_primary_key[0]
+            assert isinstance(host_id, int)
             conn.commit()
         self._logger.info(f'Created a host in the database: {host_id}')
         return host_id
